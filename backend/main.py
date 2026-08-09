@@ -1,4 +1,5 @@
-from datetime import datetime, timezone
+import os
+from datetime import datetime
 from enum import Enum
 from typing import Optional
 from uuid import uuid4
@@ -12,11 +13,13 @@ from sqlalchemy.orm import Session
 from database import Base, SessionLocal, engine
 from models import OrderRecord
 
-app = FastAPI(title="Ginseng Plus API", version="1.1.0")
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=False, allow_methods=["GET", "POST", "PATCH"], allow_headers=["*"])
+app = FastAPI(title="Ginseng Plus API", version="1.2.0")
+
+cors_origins = [x.strip() for x in os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",") if x.strip()]
+app.add_middleware(CORSMiddleware, allow_origins=cors_origins, allow_credentials=False, allow_methods=["GET", "POST", "PATCH"], allow_headers=["*"])
 Base.metadata.create_all(bind=engine)
 
-ADMIN_TOKEN = "change-this-before-production"
+ADMIN_TOKEN = os.getenv("ADMIN_TOKEN")
 
 class OrderStatus(str, Enum):
     new = "new"
@@ -51,6 +54,8 @@ def db():
         session.close()
 
 def require_admin(x_admin_token: str | None = Header(default=None)):
+    if not ADMIN_TOKEN:
+        raise HTTPException(status_code=503, detail="Admin authentication is not configured")
     if x_admin_token != ADMIN_TOKEN:
         raise HTTPException(status_code=401, detail="Invalid admin token")
 
