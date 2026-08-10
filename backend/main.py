@@ -14,7 +14,7 @@ from database import Base, SessionLocal, engine
 from models import OrderRecord
 from status_history import OrderStatusHistory
 
-app = FastAPI(title="Ginseng Plus API", version="1.5.0")
+app = FastAPI(title="Ginseng Plus API", version="1.5.1")
 
 configured_origins = os.getenv("CORS_ORIGINS", "")
 cors_origins = {x.strip().rstrip("/") for x in configured_origins.split(",") if x.strip()}
@@ -71,6 +71,23 @@ def to_response(row: OrderRecord) -> OrderResponse:
 
 def add_history(session: Session, order_id: str, status: str):
     session.add(OrderStatusHistory(order_id=order_id, status=status))
+
+def backfill_history():
+    session = SessionLocal()
+    try:
+        rows = session.scalars(select(OrderRecord)).all()
+        changed = False
+        for row in rows:
+            exists = session.scalar(select(OrderStatusHistory.id).where(OrderStatusHistory.order_id == row.id).limit(1))
+            if exists is None:
+                session.add(OrderStatusHistory(order_id=row.id, status=row.status))
+                changed = True
+        if changed:
+            session.commit()
+    finally:
+        session.close()
+
+backfill_history()
 
 @app.get("/")
 def root():
