@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 from database import Base, SessionLocal, engine
 from models import OrderRecord
 
-app = FastAPI(title="Ginseng Plus API", version="1.3.0")
+app = FastAPI(title="Ginseng Plus API", version="1.4.0")
 
 configured_origins = os.getenv("CORS_ORIGINS", "")
 cors_origins = {x.strip().rstrip("/") for x in configured_origins.split(",") if x.strip()}
@@ -63,6 +63,10 @@ def require_admin(x_admin_token: str | None = Header(default=None)):
 
 def to_response(row: OrderRecord) -> OrderResponse:
     return OrderResponse(id=row.id, name=row.name, phone=row.phone, whatsapp=row.whatsapp, state=row.state, city=row.city, address=row.address, package=row.package, status=row.status, payment_method=row.payment_method, created_at=row.created_at)
+
+@app.get("/")
+def root():
+    return {"service": "Ginseng Plus API", "status": "online", "health": "/health"}
 
 @app.get("/health")
 def health():
