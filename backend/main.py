@@ -12,8 +12,9 @@ from sqlalchemy.orm import Session
 
 from database import Base, SessionLocal, engine
 from models import OrderRecord
+from status_history import OrderStatusHistory
 
-app = FastAPI(title="Ginseng Plus API", version="1.4.0")
+app = FastAPI(title="Ginseng Plus API", version="1.5.0")
 
 configured_origins = os.getenv("CORS_ORIGINS", "")
 cors_origins = {x.strip().rstrip("/") for x in configured_origins.split(",") if x.strip()}
@@ -45,6 +46,10 @@ class OrderResponse(OrderCreate):
     payment_method: str
     created_at: datetime
 
+class HistoryResponse(BaseModel):
+    status: OrderStatus
+    changed_at: datetime
+
 class StatusUpdate(BaseModel):
     status: OrderStatus
 
@@ -64,6 +69,9 @@ def require_admin(x_admin_token: str | None = Header(default=None)):
 def to_response(row: OrderRecord) -> OrderResponse:
     return OrderResponse(id=row.id, name=row.name, phone=row.phone, whatsapp=row.whatsapp, state=row.state, city=row.city, address=row.address, package=row.package, status=row.status, payment_method=row.payment_method, created_at=row.created_at)
 
+def add_history(session: Session, order_id: str, status: str):
+    session.add(OrderStatusHistory(order_id=order_id, status=status))
+
 @app.get("/")
 def root():
     return {"service": "Ginseng Plus API", "status": "online", "health": "/health"}
@@ -78,6 +86,8 @@ def create_order(order: OrderCreate, session: Session = Depends(db)):
     row = OrderRecord(id=order_id, **order.model_dump(), status=OrderStatus.new.value, payment_method="pay_on_delivery")
     try:
         session.add(row)
+        session.flush()
+        add_history(session, order_id, OrderStatus.new.value)
         session.commit()
         session.refresh(row)
     except Exception:
@@ -97,12 +107,21 @@ def list_orders(session: Session = Depends(db)):
     rows = session.scalars(select(OrderRecord).order_by(OrderRecord.created_at.desc())).all()
     return [to_response(row) for row in rows]
 
+@app.get("/api/admin/orders/{order_id}/history", response_model=list[HistoryResponse], dependencies=[Depends(require_admin)])
+def get_order_history(order_id: str, session: Session = Depends(db)):
+    if not session.get(OrderRecord, order_id):
+        raise HTTPException(status_code=404, detail="Order not found")
+    rows = session.scalars(select(OrderStatusHistory).where(OrderStatusHistory.order_id == order_id).order_by(OrderStatusHistory.changed_at.asc())).all()
+    return [HistoryResponse(status=row.status, changed_at=row.changed_at) for row in rows]
+
 @app.patch("/api/admin/orders/{order_id}/status", response_model=OrderResponse, dependencies=[Depends(require_admin)])
 def update_status(order_id: str, update: StatusUpdate, session: Session = Depends(db)):
     row = session.get(OrderRecord, order_id)
     if not row:
         raise HTTPException(status_code=404, detail="Order not found")
-    row.status = update.status.value
-    session.commit()
-    session.refresh(row)
+    if row.status != update.status.value:
+        row.status = update.status.value
+        add_history(session, order_id, update.status.value)
+        session.commit()
+        session.refresh(row)
     return to_response(row)
