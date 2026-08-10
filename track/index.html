@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Track your Megastore Wellness order.">
+  <title>Track Order | Megastore Wellness</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .tracking-page{min-height:calc(100vh - 72px);padding:70px 0}.tracking-card{max-width:700px;margin:auto;background:#fff;border:1px solid var(--border);border-radius:24px;padding:42px}.tracking-form{display:grid;grid-template-columns:1fr auto;gap:12px;margin:25px 0}.tracking-form input{width:100%;padding:15px;border:1px solid var(--border);border-radius:10px;font:inherit}.tracking-form .btn{white-space:nowrap}.track-error{color:#a12b2b;background:#fff0f0;border:1px solid #e8caca;padding:12px;border-radius:10px}.track-result{margin-top:25px}.track-head{display:flex;justify-content:space-between;gap:15px;align-items:center;margin-bottom:18px}.status-badge{display:inline-block;background:var(--cream);color:var(--green);border-radius:999px;padding:7px 12px;font-weight:800;text-transform:capitalize}.progress{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:25px 0}.step{height:8px;border-radius:99px;background:var(--cream-dark)}.step.active{background:var(--green)}.track-details{display:grid;gap:9px;background:var(--cream);padding:20px;border-radius:14px}.track-details strong{color:var(--green-dark)}@media(max-width:650px){.tracking-card{padding:25px}.tracking-form{grid-template-columns:1fr}.track-head{align-items:flex-start;flex-direction:column}}
+  </style>
+</head>
+<body>
+<header class="site-header"><div class="container nav"><a class="logo" href="../">MEGASTORE<span>WELLNESS</span></a><a class="nav-cta" href="../#order">Order Now</a></div></header>
+<main class="tracking-page">
+  <div class="container">
+    <section class="tracking-card">
+      <p class="eyebrow" style="color:var(--green)">ORDER TRACKING</p>
+      <h1 style="font-size:clamp(2.3rem,5vw,4rem)">Track your order.</h1>
+      <p style="margin-top:12px;color:var(--muted)">Enter your order number, for example <strong>GP-70CBD40F</strong>.</p>
+      <form id="trackingForm" class="tracking-form">
+        <input id="orderId" name="orderId" placeholder="GP-XXXXXXXX" autocomplete="off" required>
+        <button class="btn btn-secondary" type="submit">Track Order</button>
+      </form>
+      <p id="trackMessage" aria-live="polite"></p>
+      <div id="trackResult" class="track-result hidden"></div>
+    </section>
+  </div>
+</main>
+<footer><div class="container footer"><strong>MEGASTORE WELLNESS</strong><p>© 2026 Megastore Wellness. All rights reserved.</p></div></footer>
+<script src="track.js"></script>
+</body>
+</html>
