@@ -13,10 +13,12 @@ from sqlalchemy.orm import Session
 from database import Base, SessionLocal, engine
 from models import OrderRecord
 
-app = FastAPI(title="Ginseng Plus API", version="1.2.0")
+app = FastAPI(title="Ginseng Plus API", version="1.3.0")
 
-cors_origins = [x.strip() for x in os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",") if x.strip()]
-app.add_middleware(CORSMiddleware, allow_origins=cors_origins, allow_credentials=False, allow_methods=["GET", "POST", "PATCH"], allow_headers=["*"])
+configured_origins = os.getenv("CORS_ORIGINS", "")
+cors_origins = {x.strip().rstrip("/") for x in configured_origins.split(",") if x.strip()}
+cors_origins.update({"https://megastorewellness.vercel.app", "http://localhost:3000"})
+app.add_middleware(CORSMiddleware, allow_origins=sorted(cors_origins), allow_credentials=False, allow_methods=["GET", "POST", "PATCH", "OPTIONS"], allow_headers=["*"])
 Base.metadata.create_all(bind=engine)
 
 ADMIN_TOKEN = os.getenv("ADMIN_TOKEN")
@@ -70,9 +72,13 @@ def health():
 def create_order(order: OrderCreate, session: Session = Depends(db)):
     order_id = f"GP-{uuid4().hex[:8].upper()}"
     row = OrderRecord(id=order_id, **order.model_dump(), status=OrderStatus.new.value, payment_method="pay_on_delivery")
-    session.add(row)
-    session.commit()
-    session.refresh(row)
+    try:
+        session.add(row)
+        session.commit()
+        session.refresh(row)
+    except Exception:
+        session.rollback()
+        raise HTTPException(status_code=500, detail="Could not save order. Please try again.")
     return to_response(row)
 
 @app.get("/api/orders/{order_id}", response_model=OrderResponse)
