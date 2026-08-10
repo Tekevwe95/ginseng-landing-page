@@ -12,22 +12,52 @@
 </head>
 <body>
 <header class="site-header"><div class="container nav"><a class="logo" href="../">MEGASTORE<span>WELLNESS</span></a><a class="nav-cta" href="../#order">Order Now</a></div></header>
-<main class="tracking-page">
-  <div class="container">
-    <section class="tracking-card">
-      <p class="eyebrow" style="color:var(--green)">ORDER TRACKING</p>
-      <h1 style="font-size:clamp(2.3rem,5vw,4rem)">Track your order.</h1>
-      <p style="margin-top:12px;color:var(--muted)">Enter your order number, for example <strong>GP-70CBD40F</strong>.</p>
-      <form id="trackingForm" class="tracking-form">
-        <input id="orderId" name="orderId" type="text" inputmode="text" autocapitalize="characters" spellcheck="false" placeholder="GP-XXXXXXXX" autocomplete="off" required>
-        <button id="trackButton" class="btn btn-secondary" type="submit">Track Order</button>
-      </form>
-      <p id="trackMessage" class="track-message" aria-live="polite"></p>
-      <div id="trackResult" class="track-result hidden"></div>
-    </section>
-  </div>
-</main>
+<main class="tracking-page"><div class="container"><section class="tracking-card">
+  <p class="eyebrow" style="color:var(--green)">ORDER TRACKING</p>
+  <h1 style="font-size:clamp(2.3rem,5vw,4rem)">Track your order.</h1>
+  <p style="margin-top:12px;color:var(--muted)">Enter your order number, for example <strong>GP-70CBD40F</strong>.</p>
+  <form id="trackingForm" class="tracking-form" onsubmit="return trackOrder(event)">
+    <input id="orderId" name="orderId" type="text" inputmode="text" autocapitalize="characters" spellcheck="false" placeholder="GP-XXXXXXXX" autocomplete="off" required>
+    <button id="trackButton" class="btn btn-secondary" type="submit">Track Order</button>
+  </form>
+  <p id="trackMessage" class="track-message" aria-live="polite"></p>
+  <div id="trackResult" class="track-result hidden"></div>
+</section></div></main>
 <footer><div class="container footer"><strong>MEGASTORE WELLNESS</strong><p>© 2026 Megastore Wellness. All rights reserved.</p></div></footer>
-<script src="track.js?v=4" defer></script>
-</body>
-</html>
+<script>
+(function(){
+  const API='https://ginseng-plus-api.onrender.com';
+  const labels={new:'Order received',confirmed:'Order confirmed',out_for_delivery:'Out for delivery',delivered:'Delivered',cancelled:'Cancelled'};
+  const stages=['new','confirmed','out_for_delivery','delivered'];
+  let currentId=''; let timer=null;
+  function normalize(v){return v.trim().replace(/[\s\u200B\u200C\u200D]+/g,'').toUpperCase();}
+  window.trackOrder=async function(e){
+    if(e)e.preventDefault();
+    const input=document.getElementById('orderId'), button=document.getElementById('trackButton'), msg=document.getElementById('trackMessage'), result=document.getElementById('trackResult');
+    currentId=normalize(input.value); input.value=currentId;
+    if(!currentId)return false;
+    button.disabled=true; button.textContent='Checking...'; msg.textContent='Checking your order...'; msg.className='track-message'; result.classList.add('hidden');
+    try{
+      const r=await fetch(API+'/api/orders/'+encodeURIComponent(currentId)+'?t='+Date.now(),{method:'GET',headers:{Accept:'application/json'},cache:'no-store'});
+      const data=await r.json().catch(()=>null);
+      if(!r.ok)throw new Error((data&&data.detail)||'Order not found');
+      render(data); msg.textContent='';
+      if(timer)clearInterval(timer); timer=setInterval(()=>load(false),15000);
+    }catch(err){msg.textContent=err.message||'Unable to find this order.';msg.className='track-error';}
+    finally{button.disabled=false;button.textContent='Track Order';}
+    return false;
+  };
+  async function load(show){
+    if(!currentId)return;
+    try{const r=await fetch(API+'/api/orders/'+encodeURIComponent(currentId)+'?t='+Date.now(),{cache:'no-store',headers:{Accept:'application/json'}});const d=await r.json().catch(()=>null);if(r.ok)render(d);else if(show){document.getElementById('trackMessage').textContent=(d&&d.detail)||'Order not found';}}catch(e){}
+  }
+  function render(o){
+    const result=document.getElementById('trackResult'), status=o.status||'new', idx=stages.indexOf(status);
+    const progress=status==='cancelled'?'':`<div class="progress">${stages.map((s,i)=>`<div class="step ${i<=idx?'active':''}"></div>`).join('')}</div>`;
+    result.innerHTML=`<div class="track-head"><div><p class="eyebrow" style="color:var(--green);margin:0">${esc(o.id)}</p><h2>${esc(labels[status]||status)}</h2></div><span class="status-badge">${esc(labels[status]||status)}</span></div>${progress}<div class="track-details"><span><strong>Package:</strong> ${esc(o.package)}</span><span><strong>Delivery:</strong> ${esc(o.city)}, ${esc(o.state)}</span><span><strong>Payment:</strong> Pay on delivery</span></div>`;
+    result.classList.remove('hidden');
+  }
+  function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+})();
+</script>
+</body></html>
