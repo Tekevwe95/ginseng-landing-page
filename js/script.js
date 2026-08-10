@@ -1,7 +1,65 @@
-const API_URL="https://ginseng-plus-api.onrender.com";
-const packageButtons=document.querySelectorAll(".package");
-const packageSelect=document.getElementById("package");
-packageButtons.forEach(button=>button.addEventListener("click",()=>{packageSelect.value=button.dataset.package;document.getElementById("order").scrollIntoView({behavior:"smooth")}));
-const form=document.getElementById("orderForm");const confirmation=document.getElementById("confirmation");const message=document.getElementById("formMessage");const summary=document.getElementById("orderSummary");
-form.addEventListener("submit",async event=>{event.preventDefault();message.textContent="Submitting your order...";const data=Object.fromEntries(new FormData(form).entries());try{const response=await fetch(`${API_URL}/api/orders`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(data)});if(!response.ok)throw new Error("Unable to submit your order");const order=await response.json();summary.innerHTML=`<div class="summary"><strong>Order ${order.id}</strong><span>${escapeHtml(order.package)}</span><span>Customer: ${escapeHtml(order.name)}</span><span>Phone: ${escapeHtml(order.phone)}</span><span>Delivery: ${escapeHtml(order.city)}, ${escapeHtml(order.state)}</span><span class="payment-line">Payment: <strong>PAY ON DELIVERY</strong></span></div>`;message.textContent="";confirmation.classList.remove("hidden");confirmation.scrollIntoView({behavior:"smooth"});form.reset()}catch(error){message.textContent="We could not submit your order. Please check your connection and try again."}});
-function escapeHtml(value){return String(value).replace(/[&<>\"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]))}
+const API_URL = "https://ginseng-plus-api.onrender.com";
+
+document.addEventListener("DOMContentLoaded", () => {
+  const packageButtons = document.querySelectorAll(".package");
+  const packageSelect = document.getElementById("package");
+  const orderSection = document.getElementById("order");
+  const form = document.getElementById("orderForm");
+  const confirmation = document.getElementById("confirmation");
+  const message = document.getElementById("formMessage");
+  const summary = document.getElementById("orderSummary");
+
+  if (!form || !packageSelect || !message) return;
+
+  packageButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      packageSelect.value = button.dataset.package || "";
+      orderSection?.scrollIntoView({ behavior: "smooth" });
+    });
+  });
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    message.textContent = "Submitting your order...";
+    message.className = "form-status";
+
+    const submitButton = form.querySelector('button[type="submit"]');
+    if (submitButton) submitButton.disabled = true;
+
+    const data = Object.fromEntries(new FormData(form).entries());
+
+    try {
+      const response = await fetch(`${API_URL}/api/orders`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify(data),
+      });
+
+      let payload = null;
+      try { payload = await response.json(); } catch (_) {}
+
+      if (!response.ok) {
+        const detail = payload?.detail || `Server returned ${response.status}`;
+        throw new Error(detail);
+      }
+
+      summary.innerHTML = `<div class="summary"><strong>Order ${escapeHtml(payload.id)}</strong><span>${escapeHtml(payload.package)}</span><span>Customer: ${escapeHtml(payload.name)}</span><span>Phone: ${escapeHtml(payload.phone)}</span><span>Delivery: ${escapeHtml(payload.city)}, ${escapeHtml(payload.state)}</span><span class="payment-line">Payment: <strong>PAY ON DELIVERY</strong></span></div>`;
+      message.textContent = "";
+      form.reset();
+      confirmation?.classList.remove("hidden");
+      confirmation?.scrollIntoView({ behavior: "smooth" });
+    } catch (error) {
+      console.error("Order submission failed:", error);
+      message.textContent = `Order could not be submitted: ${error.message || "Please check your internet connection and try again."}`;
+      message.className = "form-status form-error";
+    } finally {
+      if (submitButton) submitButton.disabled = false;
+    }
+  });
+});
+
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>\"']/g, (char) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  }[char]));
+}
