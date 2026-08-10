@@ -1,24 +1,40 @@
 const API = "https://ginseng-plus-api.onrender.com";
 let token = localStorage.getItem("ginseng_admin_token") || "";
 let allOrders = [];
+let refreshTimer = null;
+const AUTO_REFRESH_MS = 15000;
 const $ = (id) => document.getElementById(id);
 
-function showDashboard() { $("login").classList.add("hidden"); $("orders").classList.remove("hidden"); loadOrders(); }
+function showDashboard() {
+  $("login").classList.add("hidden");
+  $("orders").classList.remove("hidden");
+  loadOrders();
+  startAutoRefresh();
+}
 
 async function loadOrders() {
   const message = $("loginMessage");
+  if (!token) return;
   try {
-    message.textContent = "Loading orders...";
+    message.textContent = "Updating orders...";
     const response = await fetch(`${API}/api/admin/orders`, { headers: { "X-Admin-Token": token, Accept: "application/json" }, cache: "no-store" });
     const payload = await response.json().catch(() => null);
     if (!response.ok) throw new Error(payload?.detail || `API error: ${response.status}`);
     allOrders = Array.isArray(payload) ? payload : [];
-    render(allOrders);
-    message.textContent = "";
+    applyFilters();
+    message.textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
   } catch (error) {
     message.textContent = error.message || "Unable to load orders.";
-    $("orders").classList.add("hidden");
+    if (error.message?.includes("Invalid admin token")) stopAutoRefresh();
   }
+}
+
+function startAutoRefresh() {
+  stopAutoRefresh();
+  refreshTimer = setInterval(loadOrders, AUTO_REFRESH_MS);
+}
+function stopAutoRefresh() {
+  if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; }
 }
 
 function render(orders) {
@@ -55,5 +71,5 @@ $("loginBtn").onclick = () => { token = $("token").value.trim(); if (!token) ret
 $("refresh").onclick = loadOrders;
 $("search").oninput = applyFilters;
 $("statusFilter").onchange = applyFilters;
-$("logout").onclick = () => { localStorage.removeItem("ginseng_admin_token"); token = ""; location.reload(); };
+$("logout").onclick = () => { stopAutoRefresh(); localStorage.removeItem("ginseng_admin_token"); token = ""; location.reload(); };
 if (token) showDashboard();
