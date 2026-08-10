@@ -5,25 +5,43 @@ const message = document.getElementById("trackMessage");
 const result = document.getElementById("trackResult");
 const labels = { new: "Order received", confirmed: "Order confirmed", out_for_delivery: "Out for delivery", delivered: "Delivered", cancelled: "Cancelled" };
 const stages = ["new", "confirmed", "out_for_delivery", "delivered"];
+let trackedOrderId = "";
+let refreshTimer = null;
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
   const id = input.value.trim().toUpperCase();
   if (!id) return;
-  message.textContent = "Checking your order...";
-  message.className = "";
-  result.classList.add("hidden");
+  trackedOrderId = id;
+  await checkOrder(true);
+  startAutoRefresh();
+});
+
+async function checkOrder(showLoading = false) {
+  if (!trackedOrderId) return;
+  if (showLoading) {
+    message.textContent = "Checking your order...";
+    message.className = "";
+    result.classList.add("hidden");
+  }
   try {
-    const response = await fetch(`${API}/api/orders/${encodeURIComponent(id)}`, { headers: { Accept: "application/json" }, cache: "no-store" });
+    const response = await fetch(`${API}/api/orders/${encodeURIComponent(trackedOrderId)}`, { headers: { Accept: "application/json" }, cache: "no-store" });
     const payload = await response.json().catch(() => null);
     if (!response.ok) throw new Error(payload?.detail || "Order not found");
     render(payload);
     message.textContent = "";
   } catch (error) {
-    message.textContent = error.message || "We could not find that order.";
-    message.className = "track-error";
+    if (showLoading) {
+      message.textContent = error.message || "We could not find that order.";
+      message.className = "track-error";
+    }
   }
-});
+}
+
+function startAutoRefresh() {
+  if (refreshTimer) clearInterval(refreshTimer);
+  refreshTimer = setInterval(() => checkOrder(false), 15000);
+}
 
 function render(order) {
   const current = order.status;
