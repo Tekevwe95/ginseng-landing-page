@@ -1,10 +1,12 @@
+import hashlib
+import hmac
 import os
 from datetime import datetime
 from enum import Enum
 from typing import Optional
 from uuid import uuid4
 
-from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from sqlalchemy import select
@@ -14,7 +16,7 @@ from database import Base, SessionLocal, engine
 from models import OrderRecord
 from status_history import OrderStatusHistory
 
-app = FastAPI(title="Ginseng Plus API", version="1.5.1")
+app = FastAPI(title="Ginseng Plus API", version="1.6.0")
 
 configured_origins = os.getenv("CORS_ORIGINS", "")
 cors_origins = {x.strip().rstrip("/") for x in configured_origins.split(",") if x.strip()}
@@ -23,6 +25,8 @@ app.add_middleware(CORSMiddleware, allow_origins=sorted(cors_origins), allow_cre
 Base.metadata.create_all(bind=engine)
 
 ADMIN_TOKEN = os.getenv("ADMIN_TOKEN")
+WHATSAPP_VERIFY_TOKEN = os.getenv("WHATSAPP_VERIFY_TOKEN")
+META_APP_SECRET = os.getenv("META_APP_SECRET")
 
 class OrderStatus(str, Enum):
     new = "new"
@@ -96,6 +100,40 @@ def root():
 @app.get("/health")
 def health():
     return {"status": "ok", "service": "ginseng-plus-api"}
+
+@app.get("/webhooks/whatsapp")
+def verify_whatsapp_webhook(
+    hub_mode: str | None = Query(default=None, alias="hub.mode"),
+    hub_verify_token: str | None = Query(default=None, alias="hub.verify_token"),
+    hub_challenge: str | None = Query(default=None, alias="hub.challenge"),
+):
+    """Meta webhook verification endpoint."""
+    if not WHATSAPP_VERIFY_TOKEN:
+        raise HTTPException(status_code=503, detail="WhatsApp webhook verification is not configured")
+    if hub_mode == "subscribe" and hmac.compare_digest(hub_verify_token or "", WHATSAPP_VERIFY_TOKEN):
+        return int(hub_challenge or "0") if (hub_challenge or "").isdigit() else hub_challenge
+    raise HTTPException(status_code=403, detail="Webhook verification failed")
+
+@app.post("/webhooks/whatsapp")
+async def receive_whatsapp_webhook(request: Request):
+    """Receive WhatsApp Cloud API webhook events from Meta."""
+    raw_body = await request.body()
+
+    # If META_APP_SECRET is configured, validate Meta's X-Hub-Signature-256 header.
+    if META_APP_SECRET:
+        signature = request.headers.get("x-hub-signature-256", "")
+        expected = "sha256=" + hmac.new(META_APP_SECRET.encode("utf-8"), raw_body, hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(signature, expected):
+            raise HTTPException(status_code=403, detail="Invalid webhook signature")
+
+    try:
+        payload = await request.json()
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail="Invalid JSON payload") from exc
+
+    # Meta sends many event types here (messages, delivery/read status, etc.).
+    # We acknowledge them immediately; business-specific processing can be added safely later.
+    return {"status": "ok", "received": payload.get("object", "whatsapp_business_account")}
 
 @app.post("/api/orders", response_model=OrderResponse, status_code=201)
 def create_order(order: OrderCreate, session: Session = Depends(db)):
