@@ -5,17 +5,10 @@ let refreshTimer = null;
 const AUTO_REFRESH_MS = 15000;
 const $ = (id) => document.getElementById(id);
 
-function showDashboard() {
-  $("login").classList.add("hidden");
-  $("orders").classList.remove("hidden");
-  loadOrders();
-  startAutoRefresh();
-  updateNotificationButton();
-}
+function showDashboard() { $("login").classList.add("hidden"); $("orders").classList.remove("hidden"); loadOrders(); startAutoRefresh(); updateNotificationButton(); }
 
 async function loadOrders() {
-  const message = $("loginMessage");
-  if (!token) return;
+  const message = $("loginMessage"); if (!token) return;
   try {
     message.textContent = "Updating orders...";
     const response = await fetch(`${API}/api/admin/orders`, { headers: { "X-Admin-Token": token, Accept: "application/json" }, cache: "no-store" });
@@ -24,189 +17,65 @@ async function loadOrders() {
     allOrders = Array.isArray(payload) ? payload : [];
     applyFilters();
     message.textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
-
-    // If the dashboard was opened by clicking a push notification, open the
-    // exact order once the latest order list has loaded.
     const orderId = new URLSearchParams(window.location.search).get("order");
-    if (orderId) {
-      const order = allOrders.find((item) => item.id === orderId);
-      if (order) {
-        await openOrder(orderId);
-        history.replaceState({}, document.title, window.location.pathname);
-      }
-    }
-  } catch (error) {
-    message.textContent = error.message || "Unable to load orders.";
-    if (error.message?.includes("Invalid admin token")) stopAutoRefresh();
-  }
+    if (orderId) { const order = allOrders.find((item) => item.id === orderId); if (order) { await openOrder(orderId); history.replaceState({}, document.title, window.location.pathname); } }
+  } catch (error) { message.textContent = error.message || "Unable to load orders."; if (error.message?.includes("Invalid admin token")) stopAutoRefresh(); }
 }
-
 function startAutoRefresh() { stopAutoRefresh(); refreshTimer = setInterval(loadOrders, AUTO_REFRESH_MS); }
 function stopAutoRefresh() { if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; } }
-
-async function getRegistration() {
-  return navigator.serviceWorker.getRegistration("/admin/") || navigator.serviceWorker.register(`/admin/service-worker.js?v=10`, { scope: "/admin/", updateViaCache: "none" });
-}
-
+async function getRegistration() { return navigator.serviceWorker.getRegistration("/admin/") || navigator.serviceWorker.register(`/admin/service-worker.js?v=10`, { scope: "/admin/", updateViaCache: "none" }); }
 async function enableNotifications() {
-  if (!("Notification" in window) || !("serviceWorker" in navigator) || !("PushManager" in window)) {
-    alert("This browser does not support Web Push notifications.");
-    return;
-  }
+  if (!("Notification" in window) || !("serviceWorker" in navigator) || !("PushManager" in window)) { alert("This browser does not support Web Push notifications."); return; }
   try {
-    const permission = await Notification.requestPermission();
-    if (permission !== "granted") {
-      alert("Notifications are blocked. Allow notifications for this site in your browser settings, then try again.");
-      return;
-    }
-
-    const registration = await getRegistration();
-    await registration.update().catch(() => {});
-    await navigator.serviceWorker.ready;
-
+    const permission = await Notification.requestPermission(); if (permission !== "granted") { alert("Notifications are blocked. Allow notifications for this site in your browser settings, then try again."); return; }
+    const registration = await getRegistration(); await registration.update().catch(() => {}); await navigator.serviceWorker.ready;
     const keyResponse = await fetch(`${API}/api/admin/push/public-key`, { headers: { "X-Admin-Token": token, Accept: "application/json" }, cache: "no-store" });
-    const keyPayload = await keyResponse.json().catch(() => null);
-    if (!keyResponse.ok) throw new Error(keyPayload?.detail || `Web Push public-key request failed (${keyResponse.status}).`);
-    if (!keyPayload?.publicKey) throw new Error("The server did not return a VAPID public key.");
-
-    let subscription = await registration.pushManager.getSubscription();
-    if (!subscription) {
-      subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(keyPayload.publicKey) });
-    }
-
+    const keyPayload = await keyResponse.json().catch(() => null); if (!keyResponse.ok) throw new Error(keyPayload?.detail || `Web Push public-key request failed (${keyResponse.status}).`);
+    let subscription = await registration.pushManager.getSubscription(); if (!subscription) subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(keyPayload.publicKey) });
     const payload = subscription.toJSON();
-    if (!payload.endpoint || !payload.keys?.p256dh || !payload.keys?.auth) throw new Error("The browser created an incomplete push subscription.");
-
     const saveResponse = await fetch(`${API}/api/admin/push/subscribe`, { method: "POST", headers: { "Content-Type": "application/json", "X-Admin-Token": token }, body: JSON.stringify({ endpoint: payload.endpoint, p256dh: payload.keys.p256dh, auth: payload.keys.auth }) });
-    const savePayload = await saveResponse.json().catch(() => null);
-    if (!saveResponse.ok) throw new Error(savePayload?.detail || `Could not save notification subscription (${saveResponse.status}).`);
-
-    updateNotificationButton();
-    $("testNotification")?.classList.remove("hidden");
-
-    await registration.showNotification("Notifications enabled", { body: "Tap Test notification to confirm delivery.", icon: "/admin/icon-192.png", badge: "/admin/icon-192.png", tag: "megastore-notifications-enabled", data: { url: "/admin/" } });
-  } catch (error) {
-    console.error("Could not enable notifications:", error);
-    alert(`Notifications could not be enabled.\n\n${error.message || error}`);
-  }
+    const savePayload = await saveResponse.json().catch(() => null); if (!saveResponse.ok) throw new Error(savePayload?.detail || `Could not save notification subscription (${saveResponse.status}).`);
+    updateNotificationButton(); $("testNotification")?.classList.remove("hidden"); await registration.showNotification("Notifications enabled", { body: "Tap Test notification to confirm delivery.", icon: "/admin/icon-192.png", badge: "/admin/icon-192.png", tag: "megastore-notifications-enabled", data: { url: "/admin/" } });
+  } catch (error) { console.error("Could not enable notifications:", error); alert(`Notifications could not be enabled.\n\n${error.message || error}`); }
 }
-
-async function testPush() {
-  const button = $("testNotification");
-  button.disabled = true;
-  button.textContent = "⏳ Sending test...";
-  try {
-    const response = await fetch(`${API}/api/admin/push/test`, { method: "POST", headers: { "X-Admin-Token": token, Accept: "application/json" } });
-    const payload = await response.json().catch(() => null);
-    if (!response.ok) throw new Error(payload?.detail || `Push test failed (${response.status}).`);
-    if (!payload.sent) throw new Error(`The server found ${payload.subscriptions || 0} subscription(s) but sent 0 notifications. ${JSON.stringify(payload.failed || [])}`);
-    alert(`Push test sent successfully to ${payload.sent} device(s). Check this phone's notification shade.`);
-  } catch (error) {
-    alert(`Push test failed.\n\n${error.message || error}`);
-  } finally {
-    button.disabled = false;
-    button.textContent = "🧪 Test notification";
-  }
-}
-
-async function disableNotifications() {
-  try {
-    const registration = await getRegistration();
-    const subscription = await registration?.pushManager.getSubscription();
-    if (subscription) {
-      const payload = subscription.toJSON();
-      await fetch(`${API}/api/admin/push/subscribe`, { method: "DELETE", headers: { "Content-Type": "application/json", "X-Admin-Token": token }, body: JSON.stringify({ endpoint: payload.endpoint, p256dh: payload.keys.p256dh, auth: payload.keys.auth }) });
-      await subscription.unsubscribe();
-    }
-    updateNotificationButton();
-    $("testNotification")?.classList.add("hidden");
-  } catch (error) { console.error(error); }
-}
-
-async function updateNotificationButton() {
-  const button = $("notifications");
-  if (!button) return;
-  if (!("serviceWorker" in navigator) || !("PushManager" in window)) { button.textContent = "🔕 Push not supported"; button.disabled = true; return; }
-  try {
-    const registration = await navigator.serviceWorker.getRegistration("/admin/");
-    const subscription = await registration?.pushManager.getSubscription();
-    button.textContent = subscription ? "🔔 Notifications enabled" : "🔔 Enable notifications";
-    if (subscription) $("testNotification")?.classList.remove("hidden");
-  } catch (_) { button.textContent = "🔔 Enable notifications"; }
-}
-
-function urlBase64ToUint8Array(base64String) {
-  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
-  const rawData = atob(base64);
-  return Uint8Array.from([...rawData].map((char) => char.charCodeAt(0)));
-}
+async function testPush() { const button = $("testNotification"); button.disabled = true; button.textContent = "⏳ Sending test..."; try { const response = await fetch(`${API}/api/admin/push/test`, { method: "POST", headers: { "X-Admin-Token": token, Accept: "application/json" } }); const payload = await response.json().catch(() => null); if (!response.ok) throw new Error(payload?.detail || `Push test failed (${response.status}).`); if (!payload.sent) throw new Error(`The server found ${payload.subscriptions || 0} subscription(s) but sent 0 notifications.`); alert(`Push test sent successfully to ${payload.sent} device(s).`); } catch (error) { alert(`Push test failed.\n\n${error.message || error}`); } finally { button.disabled = false; button.textContent = "🧪 Test notification"; } }
+async function disableNotifications() { try { const registration = await getRegistration(); const subscription = await registration?.pushManager.getSubscription(); if (subscription) { const payload = subscription.toJSON(); await fetch(`${API}/api/admin/push/subscribe`, { method: "DELETE", headers: { "Content-Type": "application/json", "X-Admin-Token": token }, body: JSON.stringify({ endpoint: payload.endpoint, p256dh: payload.keys.p256dh, auth: payload.keys.auth }) }); await subscription.unsubscribe(); } updateNotificationButton(); $("testNotification")?.classList.add("hidden"); } catch (error) { console.error(error); } }
+async function updateNotificationButton() { const button = $("notifications"); if (!button) return; if (!("serviceWorker" in navigator) || !("PushManager" in window)) { button.textContent = "🔕 Push not supported"; button.disabled = true; return; } try { const registration = await navigator.serviceWorker.getRegistration("/admin/"); const subscription = await registration?.pushManager.getSubscription(); button.textContent = subscription ? "🔔 Notifications enabled" : "🔔 Enable notifications"; if (subscription) $("testNotification")?.classList.remove("hidden"); } catch (_) { button.textContent = "🔔 Enable notifications"; } }
+function urlBase64ToUint8Array(base64String) { const padding = "=".repeat((4 - (base64String.length % 4)) % 4); const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/"); const rawData = atob(base64); return Uint8Array.from([...rawData].map((char) => char.charCodeAt(0))); }
 
 function render(orders) {
-  const counts = { new: 0, confirmed: 0, out_for_delivery: 0, delivered: 0 };
+  const counts = { new: 0, confirmed: 0, out_for_delivery: 0, delivered: 0, cancelled: 0 };
   allOrders.forEach((order) => { if (counts[order.status] !== undefined) counts[order.status]++; });
-  $("newCount").textContent = counts.new;
-  $("confirmedCount").textContent = counts.confirmed;
-  $("deliveryCount").textContent = counts.out_for_delivery;
-  $("deliveredCount").textContent = counts.delivered;
-  $("orderList").innerHTML = orders.length ? orders.map((o) => `<article class="order"><div class="order-top"><div><h3><button class="order-link" onclick="openOrder('${escapeHtml(o.id)}')">${escapeHtml(o.id)}</button> — ${escapeHtml(o.name)}</h3><div class="meta">${escapeHtml(o.phone)}${o.whatsapp ? ` · WhatsApp: ${escapeHtml(o.whatsapp)}` : ""}<br>${escapeHtml(o.city)}, ${escapeHtml(o.state)}<br>${escapeHtml(o.address)}<br>${escapeHtml(o.package)} · <b>PAY ON DELIVERY</b>${o.created_at ? `<br>Ordered: ${escapeHtml(formatDate(o.created_at))}` : ""}</div></div><span class="status">${escapeHtml(label(o.status))}</span></div><div class="actions"><button onclick="openOrder('${escapeHtml(o.id)}')">View details</button>${["new","confirmed","out_for_delivery","delivered","cancelled"].map((s) => `<button class="${s === "cancelled" ? "danger" : ""}" onclick="setStatus('${escapeHtml(o.id)}','${s}')">${label(s)}</button>`).join("")}</div></article>`).join("") : "<p>No matching orders.</p>";
+  $("newCount").textContent = counts.new; $("confirmedCount").textContent = counts.confirmed; $("deliveryCount").textContent = counts.out_for_delivery; $("deliveredCount").textContent = counts.delivered;
+  $("orderList").innerHTML = orders.length ? orders.map((o) => `
+    <article class="order status-${escapeHtml(o.status)}">
+      <div class="order-top">
+        <div class="order-summary">
+          <div class="order-id-row"><span class="order-icon">📦</span><div><h3><button class="order-link" onclick="openOrder('${escapeHtml(o.id)}')">${escapeHtml(o.id)}</button></h3><div class="order-customer">${escapeHtml(o.name)}</div></div></div>
+          <div class="meta"><span>📞 ${escapeHtml(o.phone)}</span>${o.whatsapp ? `<span>💬 ${escapeHtml(o.whatsapp)}</span>` : ""}<span>📍 ${escapeHtml(o.city)}, ${escapeHtml(o.state)}</span><span>📦 ${escapeHtml(o.package)}</span><span>💳 Pay on delivery</span><span>🕒 ${escapeHtml(formatDate(o.created_at))}</span></div>
+        </div>
+        <span class="status status-${escapeHtml(o.status)}"><span class="status-dot"></span>${escapeHtml(label(o.status))}</span>
+      </div>
+      <div class="order-footer"><button class="primary-action" onclick="openOrder('${escapeHtml(o.id)}')">View order details</button><div class="status-actions"><span class="status-label">Change status:</span>${["new","confirmed","out_for_delivery","delivered","cancelled"].map((s) => `<button class="status-btn ${s === o.status ? "active" : ""} ${s === "cancelled" ? "danger" : ""}" ${s === o.status ? "disabled" : ""} onclick="setStatus('${escapeHtml(o.id)}','${s}')">${label(s)}</button>`).join("")}</div></div>
+    </article>`).join("") : "<div class='empty-state'><div>📋</div><h3>No orders found</h3><p>New orders will appear here automatically.</p></div>";
 }
-
-function applyFilters() {
-  const query = $("search").value.trim().toLowerCase();
-  const status = $("statusFilter").value;
-  const filtered = allOrders.filter((o) => {
-    const haystack = [o.id, o.name, o.phone, o.whatsapp, o.city, o.state, o.address, o.package].join(" ").toLowerCase();
-    return (!query || haystack.includes(query)) && (status === "all" || o.status === status);
-  });
-  render(filtered);
-}
+function applyFilters() { const query = $("search").value.trim().toLowerCase(); const status = $("statusFilter").value; const filtered = allOrders.filter((o) => { const haystack = [o.id, o.name, o.phone, o.whatsapp, o.city, o.state, o.address, o.package].join(" ").toLowerCase(); return (!query || haystack.includes(query)) && (status === "all" || o.status === status); }); render(filtered); }
 
 async function openOrder(id) {
-  const order = allOrders.find((item) => item.id === id);
-  if (!order) return;
-  let history = [];
-  try {
-    const response = await fetch(`${API}/api/admin/orders/${encodeURIComponent(id)}/history`, { headers: { "X-Admin-Token": token, Accept: "application/json" }, cache: "no-store" });
-    if (response.ok) history = await response.json();
-  } catch (_) {}
-  const modal = document.getElementById("orderModal") || createModal();
-  $("modalTitle").textContent = `${order.id} — ${order.name}`;
-  $("modalBody").innerHTML = `<div class="detail-grid"><div><strong>Phone</strong><span>${escapeHtml(order.phone)}</span></div><div><strong>WhatsApp</strong><span>${escapeHtml(order.whatsapp || "Not provided")}</span></div><div><strong>Package</strong><span>${escapeHtml(order.package)}</span></div><div><strong>Payment</strong><span>Pay on delivery</span></div><div><strong>State</strong><span>${escapeHtml(order.state)}</span></div><div><strong>City</strong><span>${escapeHtml(order.city)}</span></div><div class="wide"><strong>Address</strong><span>${escapeHtml(order.address)}</span></div><div class="wide"><strong>Ordered</strong><span>${escapeHtml(formatDate(order.created_at))}</span></div></div><h3>Status history</h3><div class="history">${history.length ? history.map((item) => `<div class="history-row"><span class="history-dot"></span><div><strong>${escapeHtml(label(item.status))}</strong><small>${escapeHtml(formatDate(item.changed_at))}</small></div></div>`).join("") : "<p>No status history available.</p>"}</div>`;
+  const order = allOrders.find((item) => item.id === id); if (!order) return;
+  let history = []; try { const response = await fetch(`${API}/api/admin/orders/${encodeURIComponent(id)}/history`, { headers: { "X-Admin-Token": token, Accept: "application/json" }, cache: "no-store" }); if (response.ok) history = await response.json(); } catch (_) {}
+  const modal = document.getElementById("orderModal") || createModal(); $("modalTitle").innerHTML = `<span class="modal-order-id">${escapeHtml(order.id)}</span><span class="modal-customer">${escapeHtml(order.name)}</span>`;
+  $("modalBody").innerHTML = `<div class="modal-status-banner status-${escapeHtml(order.status)}"><span class="status-dot"></span><div><small>Current status</small><strong>${escapeHtml(label(order.status))}</strong></div></div><div class="detail-section"><h3>Customer & contact</h3><div class="detail-grid"><div><strong>Phone</strong><span><a href="tel:${escapeHtml(order.phone)}">${escapeHtml(order.phone)}</a></span></div><div><strong>WhatsApp</strong><span>${order.whatsapp ? `<a href="https://wa.me/${escapeHtml(order.whatsapp.replace(/\D/g, ""))}" target="_blank" rel="noopener">${escapeHtml(order.whatsapp)}</a>` : "Not provided"}</span></div></div></div><div class="detail-section"><h3>Delivery</h3><div class="detail-grid"><div><strong>State</strong><span>${escapeHtml(order.state)}</span></div><div><strong>City</strong><span>${escapeHtml(order.city)}</span></div><div class="wide"><strong>Address</strong><span>${escapeHtml(order.address)}</span></div></div></div><div class="detail-section"><h3>Order</h3><div class="detail-grid"><div><strong>Package</strong><span>${escapeHtml(order.package)}</span></div><div><strong>Payment</strong><span>Pay on delivery</span></div><div class="wide"><strong>Order placed</strong><span>${escapeHtml(formatDate(order.created_at))}</span></div></div></div><div class="detail-section"><h3>Status history</h3><div class="history">${history.length ? history.map((item, index) => `<div class="history-row"><span class="history-dot ${index === history.length - 1 ? "current" : ""}"></span><div><strong>${escapeHtml(label(item.status))}</strong><small>${escapeHtml(formatDate(item.changed_at))}</small></div></div>`).join("") : "<p>No status history available.</p>"}</div></div><div class="modal-actions"><button class="primary-action" onclick="setStatus('${escapeHtml(order.id)}','confirmed')" ${order.status === "confirmed" ? "disabled" : ""}>✓ Confirm order</button><button onclick="closeOrder()">Close</button></div>`;
   modal.classList.remove("hidden");
 }
-
-function createModal() {
-  const modal = document.createElement("div");
-  modal.id = "orderModal";
-  modal.className = "modal hidden";
-  modal.innerHTML = `<div class="modal-backdrop" onclick="closeOrder()"></div><section class="modal-card" role="dialog" aria-modal="true"><button class="modal-close" onclick="closeOrder()" aria-label="Close">×</button><h2 id="modalTitle"></h2><div id="modalBody"></div></section>`;
-  document.body.appendChild(modal);
-  return modal;
-}
+function createModal() { const modal = document.createElement("div"); modal.id = "orderModal"; modal.className = "modal hidden"; modal.innerHTML = `<div class="modal-backdrop" onclick="closeOrder()"></div><section class="modal-card" role="dialog" aria-modal="true"><button class="modal-close" onclick="closeOrder()" aria-label="Close">×</button><h2 id="modalTitle"></h2><div id="modalBody"></div></section>`; document.body.appendChild(modal); return modal; }
 function closeOrder() { $("orderModal")?.classList.add("hidden"); }
-
-async function setStatus(id, status) {
-  if (status === "cancelled" && !confirm(`Cancel order ${id}? This action should only be used when the customer has cancelled or the order cannot be fulfilled.`)) return;
-  const response = await fetch(`${API}/api/admin/orders/${encodeURIComponent(id)}/status`, { method: "PATCH", headers: { "Content-Type": "application/json", "X-Admin-Token": token }, body: JSON.stringify({ status }) });
-  if (!response.ok) { alert("Could not update order"); return; }
-  await loadOrders();
-  if ($("orderModal") && !$("orderModal").classList.contains("hidden")) openOrder(id);
-}
-
+async function setStatus(id, status) { if (status === "cancelled" && !confirm(`Cancel order ${id}? This action should only be used when the customer has cancelled or the order cannot be fulfilled.`)) return; const response = await fetch(`${API}/api/admin/orders/${encodeURIComponent(id)}/status`, { method: "PATCH", headers: { "Content-Type": "application/json", "X-Admin-Token": token }, body: JSON.stringify({ status }) }); if (!response.ok) { alert("Could not update order"); return; } await loadOrders(); if ($("orderModal") && !$("orderModal").classList.contains("hidden")) openOrder(id); }
 function label(status) { return ({ new: "New", confirmed: "Confirmed", out_for_delivery: "Out for delivery", delivered: "Delivered", cancelled: "Cancelled" }[status] || status); }
 function formatDate(value) { const date = new Date(value); return Number.isNaN(date.getTime()) ? value : date.toLocaleString(); }
 function escapeHtml(value) { return String(value ?? "").replace(/[&<>'"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[c])); }
 
 $("loginBtn").onclick = () => { token = $("token").value.trim(); if (!token) return; localStorage.setItem("ginseng_admin_token", token); showDashboard(); };
-$("notifications").onclick = async () => {
-  const registration = await getRegistration();
-  const subscription = await registration?.pushManager.getSubscription();
-  if (subscription) await disableNotifications(); else await enableNotifications();
-};
-$("testNotification")?.addEventListener("click", testPush);
-$("refresh").onclick = loadOrders;
-$("search").oninput = applyFilters;
-$("statusFilter").onchange = applyFilters;
-$("logout").onclick = () => { stopAutoRefresh(); localStorage.removeItem("ginseng_admin_token"); token = ""; location.reload(); };
-if (token) showDashboard();
+$("notifications").onclick = async () => { const registration = await getRegistration(); const subscription = await registration?.pushManager.getSubscription(); if (subscription) await disableNotifications(); else await enableNotifications(); };
+$("testNotification")?.addEventListener("click", testPush); $("refresh").onclick = loadOrders; $("search").oninput = applyFilters; $("statusFilter").onchange = applyFilters;
+$("logout").onclick = () => { stopAutoRefresh(); localStorage.removeItem("ginseng_admin_token"); token = ""; location.reload(); }; if (token) showDashboard();
