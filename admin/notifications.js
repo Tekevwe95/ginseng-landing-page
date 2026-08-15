@@ -1,13 +1,12 @@
 (() => {
   const PUSH_API = "https://ginseng-plus-api.onrender.com";
-  const SW_URL = "/admin/service-worker.js?v=9";
+  const SW_URL = "/admin/service-worker.js?v=10";
   const TIMEOUT_MS = 12000;
 
   window.addEventListener("DOMContentLoaded", () => {
     const button = document.getElementById("notifications");
     if (!button) return;
 
-    // This is the only click handler that owns the notification button.
     button.addEventListener("click", async (event) => {
       event.preventDefault();
       event.stopImmediatePropagation();
@@ -33,7 +32,7 @@
         }
 
         stage = "registering service worker";
-        let registration = await withTimeout(
+        const registration = await withTimeout(
           navigator.serviceWorker.register(SW_URL, {
             scope: "/admin/",
             updateViaCache: "none",
@@ -42,21 +41,21 @@
           "The service worker could not be registered."
         );
 
+        // Ask the browser to check for the latest worker. The worker itself uses
+        // skipWaiting(), so a new deployment cannot remain stuck in waiting.
+        stage = "updating service worker";
+        await withTimeout(registration.update(), TIMEOUT_MS, "The service worker update check timed out.");
+
         stage = "activating service worker";
-        if (!registration.active) {
-          await waitForActive(registration, TIMEOUT_MS);
-        }
-        if (!registration.active) {
+        const activeRegistration = await waitForActive(registration, TIMEOUT_MS);
+        if (!activeRegistration.active) {
           throw new Error("The admin service worker did not become active. Open /admin/service-worker.js in Chrome to check that the file is loading.");
         }
 
-        // Do not use navigator.serviceWorker.ready without a timeout: if the worker
-        // fails to activate, that promise can remain pending indefinitely.
-        await withTimeout(
-          navigator.serviceWorker.ready,
-          TIMEOUT_MS,
-          "The service worker did not become ready."
-        );
+        // Check the registration itself instead of waiting forever on the global
+        // navigator.serviceWorker.ready promise.
+        stage = "checking service worker control";
+        await waitForController(activeRegistration, TIMEOUT_MS);
 
         stage = "checking admin login";
         const token = localStorage.getItem("ginseng_admin_token") || "";
@@ -74,10 +73,10 @@
         if (!keyPayload?.publicKey) throw new Error("The server did not return a VAPID public key.");
 
         stage = "creating browser subscription";
-        let subscription = await registration.pushManager.getSubscription();
+        let subscription = await activeRegistration.pushManager.getSubscription();
         if (!subscription) {
           subscription = await withTimeout(
-            registration.pushManager.subscribe({
+            activeRegistration.pushManager.subscribe({
               userVisibleOnly: true,
               applicationServerKey: decodeKey(keyPayload.publicKey),
             }),
@@ -108,7 +107,7 @@
 
         stage = "showing confirmation";
         await withTimeout(
-          registration.showNotification("Megastore Wellness", {
+          activeRegistration.showNotification("Megastore Wellness", {
             body: "Browser notifications are now enabled.",
             icon: "/admin/icon-192.png",
             badge: "/admin/icon-192.png",
@@ -134,34 +133,44 @@
   async function waitForActive(registration, timeout) {
     if (registration.active) return registration;
 
-    await new Promise((resolve, reject) => {
-      const worker = registration.installing || registration.waiting;
-      if (!worker) {
-        reject(new Error("No installing or waiting service worker was found."));
-        return;
-      }
+    const worker = registration.installing || registration.waiting;
+    if (!worker) {
+      // A worker can already be activating between the checks above. Give the
+      // browser one short chance to expose it before failing.
+      await sleep(100);
+      if (registration.active) return registration;
+      throw new Error("No installing or waiting service worker was found.");
+    }
 
-      const timer = setTimeout(() => {
-        worker.removeEventListener("statechange", onStateChange);
-        reject(new Error("The service worker is still installing after the timeout."));
-      }, timeout);
+    await withTimeout(new Promise((resolve, reject) => {
+      if (worker.state === "activated") return resolve();
 
       function onStateChange() {
         if (worker.state === "activated") {
-          clearTimeout(timer);
-          worker.removeEventListener("statechange", onStateChange);
+          cleanup();
           resolve();
         } else if (worker.state === "redundant") {
-          clearTimeout(timer);
-          worker.removeEventListener("statechange", onStateChange);
+          cleanup();
           reject(new Error("The service worker became redundant instead of activating."));
         }
       }
 
+      function cleanup() {
+        worker.removeEventListener("statechange", onStateChange);
+      }
+
       worker.addEventListener("statechange", onStateChange);
-    });
+    }), timeout, "The service worker is still installing after the timeout.");
 
     return registration;
+  }
+
+  async function waitForController(registration, timeout) {
+    if (navigator.serviceWorker.controller || registration.active) return;
+
+    await withTimeout(new Promise((resolve) => {
+      navigator.serviceWorker.addEventListener("controllerchange", resolve, { once: true });
+    }), timeout, "The service worker activated, but the page was not controlled by it.");
   }
 
   async function fetchWithTimeout(url, options) {
@@ -182,6 +191,10 @@
       promise,
       new Promise((_, reject) => setTimeout(() => reject(new Error(message)), timeout)),
     ]);
+  }
+
+  function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   function decodeKey(value) {
