@@ -18,7 +18,7 @@ from database import Base, SessionLocal, engine
 from models import OrderRecord, PushSubscription
 from status_history import OrderStatusHistory
 
-app = FastAPI(title="Ginseng Plus API", version="1.8.0")
+app = FastAPI(title="Ginseng Plus API", version="1.8.1")
 
 configured_origins = os.getenv("CORS_ORIGINS", "")
 cors_origins = {x.strip().rstrip("/") for x in configured_origins.split(",") if x.strip()}
@@ -166,7 +166,15 @@ def send_push_payload(payload: str):
 
 def send_order_push(order: OrderRecord):
     try:
-        send_push_payload(json.dumps({"title": "🔔 New MegaStore Wellness Order", "body": f"{order.id} · {order.package} · {order.name}", "url": "/admin/"}))
+        # Include the order ID explicitly in the push payload and URL so the
+        # service worker can open this exact order in the admin dashboard.
+        order_url = f"/admin/?order={order.id}"
+        send_push_payload(json.dumps({
+            "title": "🔔 New MegaStore Wellness Order",
+            "body": f"{order.id} · {order.package} · {order.name}",
+            "url": order_url,
+            "orderId": order.id,
+        }))
     except Exception:
         # Never make customer checkout fail just because an admin notification failed.
         pass
