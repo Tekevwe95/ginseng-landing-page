@@ -44,7 +44,10 @@ async function enableNotifications() {
       alert("Notifications are blocked. Allow notifications for this site in your browser settings, then try again.");
       return;
     }
+
     const registration = await navigator.serviceWorker.register("/admin/service-worker.js", { scope: "/admin/" });
+    await navigator.serviceWorker.ready;
+
     const keyResponse = await fetch(`${API}/api/admin/push/public-key`, { headers: { "X-Admin-Token": token, Accept: "application/json" }, cache: "no-store" });
     const keyPayload = await keyResponse.json().catch(() => null);
     if (!keyResponse.ok) throw new Error(keyPayload?.detail || "Web Push is not configured on the server yet.");
@@ -54,9 +57,21 @@ async function enableNotifications() {
     const saveResponse = await fetch(`${API}/api/admin/push/subscribe`, { method: "POST", headers: { "Content-Type": "application/json", "X-Admin-Token": token }, body: JSON.stringify({ endpoint: payload.endpoint, p256dh: payload.keys.p256dh, auth: payload.keys.auth }) });
     const savePayload = await saveResponse.json().catch(() => null);
     if (!saveResponse.ok) throw new Error(savePayload?.detail || "Could not save notification subscription.");
+
     updateNotificationButton();
-    new Notification("Notifications enabled", { body: "You will be alerted when a new order is received." });
+
+    // Mobile browsers do not support `new Notification(...)` reliably.
+    // Use the active service worker so the confirmation notification works on
+    // Android as well as desktop browsers.
+    await registration.showNotification("Notifications enabled", {
+      body: "You will be alerted when a new order is received.",
+      icon: "/admin/icon-192.png",
+      badge: "/admin/icon-192.png",
+      tag: "megastore-notifications-enabled",
+      data: { url: "/admin/" },
+    });
   } catch (error) {
+    console.error("Could not enable notifications:", error);
     alert(error.message || "Could not enable notifications.");
   }
 }
