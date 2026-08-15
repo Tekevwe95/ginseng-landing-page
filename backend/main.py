@@ -18,12 +18,12 @@ from database import Base, SessionLocal, engine
 from models import OrderRecord, PushSubscription
 from status_history import OrderStatusHistory
 
-app = FastAPI(title="Ginseng Plus API", version="1.7.0")
+app = FastAPI(title="Ginseng Plus API", version="1.8.0")
 
 configured_origins = os.getenv("CORS_ORIGINS", "")
 cors_origins = {x.strip().rstrip("/") for x in configured_origins.split(",") if x.strip()}
 cors_origins.update({"https://megastorewellness.vercel.app", "https://megastorewellness.vercel.app/", "http://localhost:3000"})
-app.add_middleware(CORSMiddleware, allow_origins=sorted(cors_origins), allow_credentials=False, allow_methods=["GET", "POST", "PATCH", "OPTIONS"], allow_headers=["*"])
+app.add_middleware(CORSMiddleware, allow_origins=sorted(cors_origins), allow_credentials=False, allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"], allow_headers=["*"])
 Base.metadata.create_all(bind=engine)
 
 ADMIN_TOKEN = os.getenv("ADMIN_TOKEN")
@@ -77,7 +77,7 @@ def db():
 def require_admin(x_admin_token: str | None = Header(default=None)):
     if not ADMIN_TOKEN:
         raise HTTPException(status_code=503, detail="Admin authentication is not configured")
-    if x_admin_token != ADMIN_TOKEN:
+    if not hmac.compare_digest(x_admin_token or "", ADMIN_TOKEN):
         raise HTTPException(status_code=401, detail="Invalid admin token")
 
 def to_response(row: OrderRecord) -> OrderResponse:
@@ -114,7 +114,9 @@ def health():
 @app.get("/api/admin/push/public-key", dependencies=[Depends(require_admin)])
 def get_push_public_key():
     if not VAPID_PUBLIC_KEY:
-        raise HTTPException(status_code=503, detail="Web Push is not configured yet")
+        raise HTTPException(status_code=503, detail="Web Push is not configured yet: VAPID_PUBLIC_KEY is missing on Render")
+    if not VAPID_PRIVATE_KEY:
+        raise HTTPException(status_code=503, detail="Web Push is not configured yet: VAPID_PRIVATE_KEY is missing on Render")
     return {"publicKey": VAPID_PUBLIC_KEY}
 
 @app.post("/api/admin/push/subscribe", dependencies=[Depends(require_admin)])
@@ -134,19 +136,25 @@ def unsubscribe_push(subscription: PushSubscriptionIn, session: Session = Depend
     session.commit()
     return {"status": "unsubscribed"}
 
-def send_order_push(order: OrderRecord):
+def send_push_payload(payload: str):
     if not (VAPID_PRIVATE_KEY and VAPID_PUBLIC_KEY):
-        return
+        raise RuntimeError("VAPID_PRIVATE_KEY and/or VAPID_PUBLIC_KEY is missing on Render")
     session = SessionLocal()
+    sent = 0
+    failed = []
+    stale = []
     try:
         subscriptions = session.scalars(select(PushSubscription)).all()
-        payload = json.dumps({"title": "🔔 New MegaStore Wellness Order", "body": f"{order.id} · {order.package} · {order.name}", "url": "/admin/"})
-        stale = []
+        if not subscriptions:
+            raise RuntimeError("No Web Push subscription is saved. Enable notifications from the admin dashboard first.")
         for sub in subscriptions:
             try:
                 webpush(subscription_info={"endpoint": sub.endpoint, "keys": {"p256dh": sub.p256dh, "auth": sub.auth}}, data=payload, vapid_private_key=VAPID_PRIVATE_KEY, vapid_claims={"sub": VAPID_SUBJECT})
+                sent += 1
             except WebPushException as exc:
-                status = getattr(getattr(exc, "response", None), "status_code", None)
+                response = getattr(exc, "response", None)
+                status = getattr(response, "status_code", None)
+                failed.append({"status": status, "error": str(exc)})
                 if status in (404, 410):
                     stale.append(sub.id)
         if stale:
@@ -154,6 +162,22 @@ def send_order_push(order: OrderRecord):
             session.commit()
     finally:
         session.close()
+    return {"sent": sent, "failed": failed, "subscriptions": len(subscriptions)}
+
+def send_order_push(order: OrderRecord):
+    try:
+        send_push_payload(json.dumps({"title": "🔔 New MegaStore Wellness Order", "body": f"{order.id} · {order.package} · {order.name}", "url": "/admin/"}))
+    except Exception:
+        # Never make customer checkout fail just because an admin notification failed.
+        pass
+
+@app.post("/api/admin/push/test", dependencies=[Depends(require_admin)])
+def test_push():
+    try:
+        result = send_push_payload(json.dumps({"title": "🔔 MegaStore Wellness Test", "body": "Web Push is working. New orders will appear here.", "url": "/admin/"}))
+        return {"status": "ok", **result}
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 @app.get("/webhooks/whatsapp")
 def verify_whatsapp_webhook(hub_mode: str | None = Query(default=None, alias="hub.mode"), hub_verify_token: str | None = Query(default=None, alias="hub.verify_token"), hub_challenge: str | None = Query(default=None, alias="hub.challenge")):
