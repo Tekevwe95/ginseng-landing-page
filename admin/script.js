@@ -24,6 +24,17 @@ async function loadOrders() {
     allOrders = Array.isArray(payload) ? payload : [];
     applyFilters();
     message.textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
+
+    // If the dashboard was opened by clicking a push notification, open the
+    // exact order once the latest order list has loaded.
+    const orderId = new URLSearchParams(window.location.search).get("order");
+    if (orderId) {
+      const order = allOrders.find((item) => item.id === orderId);
+      if (order) {
+        await openOrder(orderId);
+        history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
   } catch (error) {
     message.textContent = error.message || "Unable to load orders.";
     if (error.message?.includes("Invalid admin token")) stopAutoRefresh();
@@ -34,7 +45,7 @@ function startAutoRefresh() { stopAutoRefresh(); refreshTimer = setInterval(load
 function stopAutoRefresh() { if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; } }
 
 async function getRegistration() {
-  return navigator.serviceWorker.getRegistration("/admin/") || navigator.serviceWorker.register(`/admin/service-worker.js?v=6`, { scope: "/admin/", updateViaCache: "none" });
+  return navigator.serviceWorker.getRegistration("/admin/") || navigator.serviceWorker.register(`/admin/service-worker.js?v=10`, { scope: "/admin/", updateViaCache: "none" });
 }
 
 async function enableNotifications() {
