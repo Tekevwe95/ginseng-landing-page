@@ -10,6 +10,7 @@ function showDashboard() {
   $("orders").classList.remove("hidden");
   loadOrders();
   startAutoRefresh();
+  updateNotificationButton();
 }
 
 async function loadOrders() {
@@ -31,6 +32,65 @@ async function loadOrders() {
 
 function startAutoRefresh() { stopAutoRefresh(); refreshTimer = setInterval(loadOrders, AUTO_REFRESH_MS); }
 function stopAutoRefresh() { if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; } }
+
+async function enableNotifications() {
+  if (!("Notification" in window) || !("serviceWorker" in navigator) || !("PushManager" in window)) {
+    alert("This browser does not support Web Push notifications.");
+    return;
+  }
+  try {
+    const permission = await Notification.requestPermission();
+    if (permission !== "granted") {
+      alert("Notifications are blocked. Allow notifications for this site in your browser settings, then try again.");
+      return;
+    }
+    const registration = await navigator.serviceWorker.register("/admin/service-worker.js", { scope: "/admin/" });
+    const keyResponse = await fetch(`${API}/api/admin/push/public-key`, { headers: { "X-Admin-Token": token, Accept: "application/json" }, cache: "no-store" });
+    const keyPayload = await keyResponse.json().catch(() => null);
+    if (!keyResponse.ok) throw new Error(keyPayload?.detail || "Web Push is not configured on the server yet.");
+    let subscription = await registration.pushManager.getSubscription();
+    if (!subscription) subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(keyPayload.publicKey) });
+    const payload = subscription.toJSON();
+    const saveResponse = await fetch(`${API}/api/admin/push/subscribe`, { method: "POST", headers: { "Content-Type": "application/json", "X-Admin-Token": token }, body: JSON.stringify({ endpoint: payload.endpoint, p256dh: payload.keys.p256dh, auth: payload.keys.auth }) });
+    const savePayload = await saveResponse.json().catch(() => null);
+    if (!saveResponse.ok) throw new Error(savePayload?.detail || "Could not save notification subscription.");
+    updateNotificationButton();
+    new Notification("Notifications enabled", { body: "You will be alerted when a new order is received." });
+  } catch (error) {
+    alert(error.message || "Could not enable notifications.");
+  }
+}
+
+async function disableNotifications() {
+  try {
+    const registration = await navigator.serviceWorker.getRegistration("/admin/");
+    const subscription = await registration?.pushManager.getSubscription();
+    if (subscription) {
+      const payload = subscription.toJSON();
+      await fetch(`${API}/api/admin/push/subscribe`, { method: "DELETE", headers: { "Content-Type": "application/json", "X-Admin-Token": token }, body: JSON.stringify({ endpoint: payload.endpoint, p256dh: payload.keys.p256dh, auth: payload.keys.auth }) });
+      await subscription.unsubscribe();
+    }
+    updateNotificationButton();
+  } catch (_) {}
+}
+
+async function updateNotificationButton() {
+  const button = $("notifications");
+  if (!button) return;
+  if (!("serviceWorker" in navigator) || !("PushManager" in window)) { button.textContent = "🔕 Push not supported"; button.disabled = true; return; }
+  try {
+    const registration = await navigator.serviceWorker.getRegistration("/admin/");
+    const subscription = await registration?.pushManager.getSubscription();
+    button.textContent = subscription ? "🔔 Notifications enabled" : "🔔 Enable notifications";
+  } catch (_) { button.textContent = "🔔 Enable notifications"; }
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = atob(base64);
+  return Uint8Array.from([...rawData].map((char) => char.charCodeAt(0)));
+}
 
 function render(orders) {
   const counts = { new: 0, confirmed: 0, out_for_delivery: 0, delivered: 0 };
@@ -81,7 +141,7 @@ async function setStatus(id, status) {
   const response = await fetch(`${API}/api/admin/orders/${encodeURIComponent(id)}/status`, { method: "PATCH", headers: { "Content-Type": "application/json", "X-Admin-Token": token }, body: JSON.stringify({ status }) });
   if (!response.ok) { alert("Could not update order"); return; }
   await loadOrders();
-  if ($("orderModal") && !$('orderModal').classList.contains("hidden")) openOrder(id);
+  if ($("orderModal") && !$("orderModal").classList.contains("hidden")) openOrder(id);
 }
 
 function label(status) { return ({ new: "New", confirmed: "Confirmed", out_for_delivery: "Out for delivery", delivered: "Delivered", cancelled: "Cancelled" }[status] || status); }
@@ -89,6 +149,11 @@ function formatDate(value) { const date = new Date(value); return Number.isNaN(d
 function escapeHtml(value) { return String(value ?? "").replace(/[&<>'"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[c])); }
 
 $("loginBtn").onclick = () => { token = $("token").value.trim(); if (!token) return; localStorage.setItem("ginseng_admin_token", token); showDashboard(); };
+$("notifications").onclick = async () => {
+  const registration = await navigator.serviceWorker.getRegistration("/admin/");
+  const subscription = await registration?.pushManager.getSubscription();
+  if (subscription) await disableNotifications(); else await enableNotifications();
+};
 $("refresh").onclick = loadOrders;
 $("search").oninput = applyFilters;
 $("statusFilter").onchange = applyFilters;
