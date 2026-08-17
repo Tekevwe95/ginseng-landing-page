@@ -4,7 +4,7 @@
  * Sources:
  * 1. CountriesNow state/city API.
  * 2. Countries-States-Cities-JSON Nigeria dataset.
- * 3. Broader Nigerian city/town dataset used as a supplemental source.
+ * 3. Nigeria state/LGA dataset as a supplemental delivery-location source.
  *
  * The selector keeps the existing form fields intact: state, city, and
  * other_city. If a customer cannot find a location, the manual-entry path
@@ -14,8 +14,8 @@
 (function () {
   const CITIES_API_URL = 'https://countriesnow.space/api/v0.1/countries/state/cities';
   const DATA_URL = 'https://cdn.jsdelivr.net/gh/Yerikmiller/Countries-States-Cities-JSON@latest/countries/NGA.json';
-  const BROADER_DATA_URL = 'https://gist.githubusercontent.com/chrisidakwo/28f8dd7dabcfdb969032283d79f6b0d3/raw/';
-  const CACHE_KEY = 'ginsengPlusNigeriaLocations:v3';
+  const LGA_DATA_URL = 'https://gist.githubusercontent.com/judeebene/2b3f9c0c816b68ff5dd5fa40c48a3d5c/raw/22e0b687f267d55e28e6428ce360118142b6f1fe/state%20and%20lga%20json%20in%20nigeria';
+  const CACHE_KEY = 'ginsengPlusNigeriaLocations:v4';
   const STYLE_ID = 'ginseng-location-selector-styles';
 
   const stateSelect = document.getElementById('state');
@@ -25,8 +25,6 @@
 
   if (!stateSelect || !citySelect) return;
 
-  // The existing stylesheet did not define .is-hidden, so the manual city
-  // field could remain visible even when a location was selected.
   if (!document.getElementById(STYLE_ID)) {
     const style = document.createElement('style');
     style.id = STYLE_ID;
@@ -35,7 +33,7 @@
   }
 
   let fallbackDataPromise;
-  let broaderDataPromise;
+  let lgaDataPromise;
   const memoryCache = new Map();
 
   function normalize(value) {
@@ -129,15 +127,15 @@
     return fallbackDataPromise;
   }
 
-  async function loadBroaderDataset() {
-    if (!broaderDataPromise) {
-      broaderDataPromise = fetch(BROADER_DATA_URL, { headers: { Accept: 'application/json' } })
+  async function loadLgaDataset() {
+    if (!lgaDataPromise) {
+      lgaDataPromise = fetch(LGA_DATA_URL, { headers: { Accept: 'application/json' } })
         .then((response) => {
-          if (!response.ok) throw new Error(`Broader location request failed: ${response.status}`);
+          if (!response.ok) throw new Error(`LGA location request failed: ${response.status}`);
           return response.json();
         });
     }
-    return broaderDataPromise;
+    return lgaDataPromise;
   }
 
   async function loadCitiesFromApi(stateName) {
@@ -147,9 +145,7 @@
       body: JSON.stringify({ country: 'Nigeria', state: stateName })
     });
 
-    if (!response.ok) {
-      throw new Error(`Cities API request failed: ${response.status}`);
-    }
+    if (!response.ok) throw new Error(`Cities API request failed: ${response.status}`);
 
     const payload = await response.json();
     if (payload.error || !Array.isArray(payload.data)) {
@@ -164,17 +160,21 @@
     const state = getStates(data).find((item) =>
       stateNamesMatch(item?.name || item?.state || item?.title, stateName)
     );
-
-    if (!state) return [];
-    return getCitiesFromState(state);
+    return state ? getCitiesFromState(state) : [];
   }
 
-  async function loadCitiesFromBroaderDataset(stateName) {
-    const data = await loadBroaderDataset();
-    if (!data || typeof data !== 'object' || Array.isArray(data)) return [];
+  async function loadLocationsFromLgaDataset(stateName) {
+    const data = await loadLgaDataset();
+    const states = Array.isArray(data) ? data : data?.states;
+    if (!Array.isArray(states)) return [];
 
-    const key = Object.keys(data).find((name) => stateNamesMatch(name, stateName));
-    return key ? cleanCities(data[key]) : [];
+    const state = states.find((item) => stateNamesMatch(item?.name || item?.state, stateName));
+    if (!state || !Array.isArray(state.locals)) return [];
+
+    // LGA names are useful delivery-location choices when a city/town API
+    // does not list the customer's locality. They are merged, deduplicated,
+    // and remain covered by the manual-entry option.
+    return cleanCities(state.locals);
   }
 
   function setOtherCityVisible(visible) {
@@ -192,7 +192,7 @@
     const placeholder = document.createElement('option');
     placeholder.value = '';
     placeholder.textContent = cities.length
-      ? 'Select your city / town'
+      ? 'Select your city / town / LGA'
       : 'Select or enter your city / town';
     citySelect.appendChild(placeholder);
 
@@ -243,12 +243,12 @@
     }
 
     try {
-      // Load independent sources together and merge their results. This avoids
-      // relying on a single provider whose city list may be too small.
+      // Merge independent sources so a small city list from one provider does
+      // not hide useful Nigerian delivery locations available in another.
       const results = await Promise.allSettled([
         loadCitiesFromApi(stateName),
         loadCitiesFromFallback(stateName),
-        loadCitiesFromBroaderDataset(stateName)
+        loadLocationsFromLgaDataset(stateName)
       ]);
 
       const cities = cleanCities(
