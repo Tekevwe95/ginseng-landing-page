@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
   style.id = 'routine-carousel-styles';
   style.textContent = `
     .routine-carousel{display:block!important;position:relative;max-width:680px!important;height:470px;margin:0 auto!important;overflow:hidden}
+    .routine-carousel .routine-number{display:none!important}
     .routine-carousel .routine-carousel-card{position:absolute;top:0;left:50%;width:100%;margin:0;opacity:0;visibility:hidden;transform:translateX(100%);will-change:transform,opacity;box-shadow:0 12px 34px rgba(18,59,39,.09)}
     .routine-carousel .routine-carousel-card.is-active{visibility:visible;opacity:1;transform:translateX(-50%)}
     .routine-carousel .routine-carousel-card.slide-in-right{visibility:visible;animation:routineCardIn .72s cubic-bezier(.22,.8,.24,1) forwards}
@@ -25,8 +26,6 @@ document.addEventListener('DOMContentLoaded', () => {
   `;
   document.head.appendChild(style);
 
-  // One fixed showcase position. Each card enters from the right and leaves
-  // to the left, giving every step its own moment without moving the section.
   const routineImages = [
     'assets/routine-01-drop.png',
     'assets/routine-02-pour.png',
