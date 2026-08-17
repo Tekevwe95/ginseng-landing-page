@@ -71,10 +71,10 @@ function addRoutineSection() {
     .routine-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;max-width:1100px;margin:0 auto;position:relative}
     .routine-step{position:relative;background:#fff;border:1px solid #eadbbd;border-radius:22px;overflow:hidden;box-shadow:0 8px 28px rgba(18,59,39,.06)}
     .routine-number{position:absolute;z-index:2;top:-16px;left:50%;transform:translateX(-50%);width:58px;height:58px;border-radius:50%;display:grid;place-items:center;background:var(--green);color:#fff;font-weight:800;font-size:1.15rem;border:5px solid #fbf7ef}
-    .routine-image{height:245px;width:100%;object-fit:cover;display:block;background:#f4d8c5}
-    .routine-step:nth-child(1) .routine-image{object-position:center 72%}
-    .routine-step:nth-child(2) .routine-image{object-position:center 48%}
-    .routine-step:nth-child(3) .routine-image{object-position:center 42%}
+    .routine-image{height:245px;width:100%;display:block;background-image:url('../assets/product.jpg');background-repeat:no-repeat;background-size:300% auto;background-color:#f4d8c5}
+    .routine-image.drop{background-position:0% 72%}
+    .routine-image.pour{background-position:50% 48%}
+    .routine-image.steep{background-position:100% 42%}
     .routine-content{padding:22px 24px 26px}
     .routine-content h3{font-family:"Playfair Display",serif;font-size:1.7rem;color:var(--green-dark);margin-bottom:5px}
     .routine-content strong{display:block;font-size:1rem;margin-bottom:7px}
@@ -89,7 +89,7 @@ function addRoutineSection() {
       .routine-heading{margin-bottom:38px}
       .routine-steps{grid-template-columns:1fr;gap:16px;max-width:520px}
       .routine-number{top:12px;left:22px;transform:none;border-color:#fff}
-      .routine-image{height:220px}
+      .routine-image{height:220px;background-size:300% auto}
       .routine-content{padding:20px 20px 23px}
       .routine-content h3{font-size:1.5rem}
       .routine-meta{grid-template-columns:1fr;gap:14px;max-width:520px;padding:18px}
@@ -111,17 +111,17 @@ function addRoutineSection() {
       <div class="routine-steps">
         <article class="routine-step">
           <span class="routine-number">01</span>
-          <img class="routine-image" src="assets/product.jpg" alt="Ginseng Five-Treasure Tea sachet ready to be placed in a cup">
+          <div class="routine-image drop" role="img" aria-label="Ginseng Five-Treasure Tea contents being placed into a cup"></div>
           <div class="routine-content"><h3>Drop</h3><strong>Take one sachet</strong><p>Place one 10g tea bag into your cup.</p></div>
         </article>
         <article class="routine-step">
           <span class="routine-number">02</span>
-          <img class="routine-image" src="assets/product.jpg" alt="Ginseng Five-Treasure Tea ready for hot water">
+          <div class="routine-image pour" role="img" aria-label="Hot water being poured over Ginseng Five-Treasure Tea"></div>
           <div class="routine-content"><h3>Pour</h3><strong>Add hot water</strong><p>Pour water at 90°C or above into the cup.</p></div>
         </article>
         <article class="routine-step">
           <span class="routine-number">03</span>
-          <img class="routine-image" src="assets/product.jpg" alt="Brewed Ginseng Five-Treasure Tea ready to drink">
+          <div class="routine-image steep" role="img" aria-label="Ginseng Five-Treasure Tea steeping in a cup"></div>
           <div class="routine-content"><h3>Steep &amp; Sip</h3><strong>Wait 3–5 minutes</strong><p>Let the herbs infuse, then enjoy your tea.</p></div>
         </article>
       </div>
