@@ -1,8 +1,10 @@
 /*
  * Comprehensive Nigerian location selector for checkout.
  *
- * Primary source: CountriesNow state/city API (no API key required).
- * Fallback source: Countries-States-Cities-JSON Nigeria dataset.
+ * Sources:
+ * 1. CountriesNow state/city API.
+ * 2. Countries-States-Cities-JSON Nigeria dataset.
+ * 3. Broader Nigerian city/town dataset used as a supplemental source.
  *
  * The selector keeps the existing form fields intact: state, city, and
  * other_city. If a customer cannot find a location, the manual-entry path
@@ -12,7 +14,9 @@
 (function () {
   const CITIES_API_URL = 'https://countriesnow.space/api/v0.1/countries/state/cities';
   const DATA_URL = 'https://cdn.jsdelivr.net/gh/Yerikmiller/Countries-States-Cities-JSON@latest/countries/NGA.json';
-  const CACHE_KEY = 'ginsengPlusNigeriaLocations:v2';
+  const BROADER_DATA_URL = 'https://gist.githubusercontent.com/chrisidakwo/28f8dd7dabcfdb969032283d79f6b0d3/raw/';
+  const CACHE_KEY = 'ginsengPlusNigeriaLocations:v3';
+  const STYLE_ID = 'ginseng-location-selector-styles';
 
   const stateSelect = document.getElementById('state');
   const citySelect = document.getElementById('city');
@@ -21,7 +25,17 @@
 
   if (!stateSelect || !citySelect) return;
 
+  // The existing stylesheet did not define .is-hidden, so the manual city
+  // field could remain visible even when a location was selected.
+  if (!document.getElementById(STYLE_ID)) {
+    const style = document.createElement('style');
+    style.id = STYLE_ID;
+    style.textContent = '.is-hidden{display:none!important;}';
+    document.head.appendChild(style);
+  }
+
   let fallbackDataPromise;
+  let broaderDataPromise;
   const memoryCache = new Map();
 
   function normalize(value) {
@@ -32,19 +46,22 @@
       .replace(/\s+/g, ' ');
   }
 
+  function stateKey(value) {
+    return normalize(value).replace(/[^a-z0-9]/g, '');
+  }
+
   function stateNamesMatch(datasetName, selectedName) {
-    const a = normalize(datasetName);
-    const b = normalize(selectedName);
+    const a = stateKey(datasetName);
+    const b = stateKey(selectedName);
     if (a === b) return true;
 
-    // The checkout uses the official display name while some datasets use
-    // "Abuja Federal Capital Territory" for the FCT.
     const aliases = new Set([
-      'federal capital territory (fct)',
-      'federal capital territory',
-      'abuja federal capital territory',
-      'abuja fct',
-      'fct'
+      'federalcapitalterritoryfct',
+      'federalcapitalterritory',
+      'abujafederalcapitalterritory',
+      'abujafct',
+      'fct',
+      'fctfederalcapitalterritory'
     ]);
     return aliases.has(a) && aliases.has(b);
   }
@@ -112,6 +129,17 @@
     return fallbackDataPromise;
   }
 
+  async function loadBroaderDataset() {
+    if (!broaderDataPromise) {
+      broaderDataPromise = fetch(BROADER_DATA_URL, { headers: { Accept: 'application/json' } })
+        .then((response) => {
+          if (!response.ok) throw new Error(`Broader location request failed: ${response.status}`);
+          return response.json();
+        });
+    }
+    return broaderDataPromise;
+  }
+
   async function loadCitiesFromApi(stateName) {
     const response = await fetch(CITIES_API_URL, {
       method: 'POST',
@@ -137,8 +165,16 @@
       stateNamesMatch(item?.name || item?.state || item?.title, stateName)
     );
 
-    if (!state) throw new Error('Selected state was not found in the fallback dataset.');
+    if (!state) return [];
     return getCitiesFromState(state);
+  }
+
+  async function loadCitiesFromBroaderDataset(stateName) {
+    const data = await loadBroaderDataset();
+    if (!data || typeof data !== 'object' || Array.isArray(data)) return [];
+
+    const key = Object.keys(data).find((name) => stateNamesMatch(name, stateName));
+    return key ? cleanCities(data[key]) : [];
   }
 
   function setOtherCityVisible(visible) {
@@ -200,23 +236,26 @@
       return;
     }
 
-    const cacheKey = normalize(stateName);
+    const cacheKey = stateKey(stateName);
     if (memoryCache.has(cacheKey)) {
       renderCities(memoryCache.get(cacheKey));
       return;
     }
 
     try {
-      let cities = [];
+      // Load independent sources together and merge their results. This avoids
+      // relying on a single provider whose city list may be too small.
+      const results = await Promise.allSettled([
+        loadCitiesFromApi(stateName),
+        loadCitiesFromFallback(stateName),
+        loadCitiesFromBroaderDataset(stateName)
+      ]);
 
-      // Use the API first because it is designed specifically for state/city
-      // lookup and is more comprehensive than the legacy embedded list.
-      try {
-        cities = await loadCitiesFromApi(stateName);
-      } catch (apiError) {
-        console.warn('Primary Nigerian city API unavailable; using dataset fallback.', apiError);
-        cities = await loadCitiesFromFallback(stateName);
-      }
+      const cities = cleanCities(
+        results.flatMap((result) => result.status === 'fulfilled' ? result.value : [])
+      );
+
+      if (!cities.length) throw new Error('No Nigerian locations were returned by the available sources.');
 
       memoryCache.set(cacheKey, cities);
       renderCities(cities);
