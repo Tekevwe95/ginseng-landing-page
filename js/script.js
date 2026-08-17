@@ -44,36 +44,100 @@ function addIngredientsSection() {
         <p>Your daily cup, made from nature.<br>Five whole herbs. Nothing unnecessary.</p>
       </div>
       <div class="ingredient-grid">
-        <article class="ingredient-card">
-          <div class="ingredient-icon" aria-hidden="true">🌿</div>
-          <div><h3>Ginseng Root</h3><p>Core energy restorer — the king of herbs</p></div>
-        </article>
-        <article class="ingredient-card">
-          <div class="ingredient-icon" aria-hidden="true">🔴</div>
-          <div><h3>Wolfberry (Goji)</h3><p>Antioxidant powerhouse — kidney and liver tonic</p></div>
-        </article>
-        <article class="ingredient-card">
-          <div class="ingredient-icon" aria-hidden="true">🌹</div>
-          <div><h3>Red Dates</h3><p>Nourishes blood, strengthens immunity</p></div>
-        </article>
-        <article class="ingredient-card">
-          <div class="ingredient-icon" aria-hidden="true">🍃</div>
-          <div><h3>Mulberry Leaf</h3><p>Blood sugar balance and anti-aging</p></div>
-        </article>
-        <article class="ingredient-card">
-          <div class="ingredient-icon" aria-hidden="true">🌾</div>
-          <div><h3>Yellow Essence (Huang Jing)</h3><p>Lung health, respiratory support</p></div>
-        </article>
+        <article class="ingredient-card"><div class="ingredient-icon" aria-hidden="true">🌿</div><div><h3>Ginseng Root</h3><p>Core energy restorer — the king of herbs</p></div></article>
+        <article class="ingredient-card"><div class="ingredient-icon" aria-hidden="true">🔴</div><div><h3>Wolfberry (Goji)</h3><p>Antioxidant powerhouse — kidney and liver tonic</p></div></article>
+        <article class="ingredient-card"><div class="ingredient-icon" aria-hidden="true">🌹</div><div><h3>Red Dates</h3><p>Nourishes blood, strengthens immunity</p></div></article>
+        <article class="ingredient-card"><div class="ingredient-icon" aria-hidden="true">🍃</div><div><h3>Mulberry Leaf</h3><p>Blood sugar balance and anti-aging</p></div></article>
+        <article class="ingredient-card"><div class="ingredient-icon" aria-hidden="true">🌾</div><div><h3>Yellow Essence (Huang Jing)</h3><p>Lung health, respiratory support</p></div></article>
       </div>
       <div class="ingredient-note"><span>✓</span>10g of whole herbs per bag — brews 2–3 potent cups.</div>
     </div>
   `;
+  productSection.parentNode.insertBefore(section, productSection);
+}
 
+function addRoutineSection() {
+  const productSection = document.querySelector(".product-section");
+  if (!productSection || document.getElementById("routine")) return;
+
+  const style = document.createElement("style");
+  style.id = "routine-section-styles";
+  style.textContent = `
+    .routine-section{background:#fbf7ef;padding:88px 0;overflow:hidden}
+    .routine-heading{max-width:820px;margin:0 auto 46px;text-align:center}
+    .routine-heading .eyebrow{margin-bottom:12px}
+    .routine-heading h2{font-size:clamp(2.25rem,4.5vw,3.7rem);margin-bottom:16px}
+    .routine-heading p:last-child{color:var(--muted);font-size:1.05rem}
+    .routine-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;max-width:1100px;margin:0 auto;position:relative}
+    .routine-step{position:relative;background:#fff;border:1px solid #eadbbd;border-radius:22px;overflow:hidden;box-shadow:0 8px 28px rgba(18,59,39,.06)}
+    .routine-number{position:absolute;z-index:2;top:-16px;left:50%;transform:translateX(-50%);width:58px;height:58px;border-radius:50%;display:grid;place-items:center;background:var(--green);color:#fff;font-weight:800;font-size:1.15rem;border:5px solid #fbf7ef}
+    .routine-image{height:245px;width:100%;object-fit:cover;display:block;background:#f4d8c5}
+    .routine-step:nth-child(1) .routine-image{object-position:center 72%}
+    .routine-step:nth-child(2) .routine-image{object-position:center 48%}
+    .routine-step:nth-child(3) .routine-image{object-position:center 42%}
+    .routine-content{padding:22px 24px 26px}
+    .routine-content h3{font-family:"Playfair Display",serif;font-size:1.7rem;color:var(--green-dark);margin-bottom:5px}
+    .routine-content strong{display:block;font-size:1rem;margin-bottom:7px}
+    .routine-content p{color:var(--muted);line-height:1.6;font-size:.92rem}
+    .routine-meta{max-width:1100px;margin:28px auto 0;border:1px solid #d9decf;border-radius:18px;background:rgba(255,255,255,.55);padding:20px 24px;display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+    .routine-meta-item{display:flex;align-items:center;gap:13px;justify-content:center;text-align:left}
+    .routine-meta-icon{width:46px;height:46px;border-radius:50%;background:#edf0dc;display:grid;place-items:center;font-size:22px;flex:0 0 46px}
+    .routine-meta strong{display:block;color:var(--green-dark);font-size:1.05rem}
+    .routine-meta span{display:block;color:var(--muted);font-size:.82rem;margin-top:2px}
+    @media(max-width:800px){
+      .routine-section{padding:68px 0}
+      .routine-heading{margin-bottom:38px}
+      .routine-steps{grid-template-columns:1fr;gap:16px;max-width:520px}
+      .routine-number{top:12px;left:22px;transform:none;border-color:#fff}
+      .routine-image{height:220px}
+      .routine-content{padding:20px 20px 23px}
+      .routine-content h3{font-size:1.5rem}
+      .routine-meta{grid-template-columns:1fr;gap:14px;max-width:520px;padding:18px}
+      .routine-meta-item{justify-content:flex-start}
+    }
+  `;
+  document.head.appendChild(style);
+
+  const section = document.createElement("section");
+  section.id = "routine";
+  section.className = "routine-section";
+  section.innerHTML = `
+    <div class="container">
+      <div class="routine-heading">
+        <p class="eyebrow">YOUR DAILY RITUAL</p>
+        <h2>Simple to brew. Easy to enjoy.</h2>
+        <p>Just 3 simple steps to your perfect cup of Ginseng Five-Treasure Tea.</p>
+      </div>
+      <div class="routine-steps">
+        <article class="routine-step">
+          <span class="routine-number">01</span>
+          <img class="routine-image" src="assets/product.jpg" alt="Ginseng Five-Treasure Tea sachet ready to be placed in a cup">
+          <div class="routine-content"><h3>Drop</h3><strong>Take one sachet</strong><p>Place one 10g tea bag into your cup.</p></div>
+        </article>
+        <article class="routine-step">
+          <span class="routine-number">02</span>
+          <img class="routine-image" src="assets/product.jpg" alt="Ginseng Five-Treasure Tea ready for hot water">
+          <div class="routine-content"><h3>Pour</h3><strong>Add hot water</strong><p>Pour water at 90°C or above into the cup.</p></div>
+        </article>
+        <article class="routine-step">
+          <span class="routine-number">03</span>
+          <img class="routine-image" src="assets/product.jpg" alt="Brewed Ginseng Five-Treasure Tea ready to drink">
+          <div class="routine-content"><h3>Steep &amp; Sip</h3><strong>Wait 3–5 minutes</strong><p>Let the herbs infuse, then enjoy your tea.</p></div>
+        </article>
+      </div>
+      <div class="routine-meta">
+        <div class="routine-meta-item"><div class="routine-meta-icon">🌿</div><div><strong>One sachet. One cup.</strong><span>A simple herbal ritual.</span></div></div>
+        <div class="routine-meta-item"><div class="routine-meta-icon">⚖️</div><div><strong>10g</strong><span>of whole herbs per bag</span></div></div>
+        <div class="routine-meta-item"><div class="routine-meta-icon">☕</div><div><strong>Brews 2–3</strong><span>potent cups from each bag</span></div></div>
+      </div>
+    </div>
+  `;
   productSection.parentNode.insertBefore(section, productSection);
 }
 
 document.addEventListener("DOMContentLoaded", () => {
   addIngredientsSection();
+  addRoutineSection();
 
   const packageButtons = document.querySelectorAll(".package");
   const packageSelect = document.getElementById("package");
@@ -104,9 +168,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const data = Object.fromEntries(new FormData(form).entries());
 
-    // Keep the backend contract unchanged: it expects the actual location in
-    // `city`. When the customer uses the manual fallback, move `other_city`
-    // into `city` before sending the existing order payload.
     if (data.city === "__other__") {
       data.city = String(data.other_city || "").trim();
     }
