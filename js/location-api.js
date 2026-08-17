@@ -4,7 +4,8 @@
  * Sources:
  * 1. CountriesNow state/city API.
  * 2. Countries-States-Cities-JSON Nigeria dataset.
- * 3. Nigeria state/LGA dataset as a supplemental delivery-location source.
+ * 3. Nigerian cities dataset (state -> cities/towns).
+ * 4. Nigerian state/LGA dataset as a supplemental delivery-location source.
  *
  * The selector keeps the existing form fields intact: state, city, and
  * other_city. If a customer cannot find a location, the manual-entry path
@@ -14,8 +15,9 @@
 (function () {
   const CITIES_API_URL = 'https://countriesnow.space/api/v0.1/countries/state/cities';
   const DATA_URL = 'https://cdn.jsdelivr.net/gh/Yerikmiller/Countries-States-Cities-JSON@latest/countries/NGA.json';
+  const CITY_DATA_URL = 'https://gist.githubusercontent.com/mr-chidex/3a51271217871827eb86fb664d29e7e5/raw/';
   const LGA_DATA_URL = 'https://gist.githubusercontent.com/judeebene/2b3f9c0c816b68ff5dd5fa40c48a3d5c/raw/22e0b687f267d55e28e6428ce360118142b6f1fe/state%20and%20lga%20json%20in%20nigeria';
-  const CACHE_KEY = 'ginsengPlusNigeriaLocations:v4';
+  const CACHE_KEY = 'ginsengPlusNigeriaLocations:v5';
   const STYLE_ID = 'ginseng-location-selector-styles';
 
   const stateSelect = document.getElementById('state');
@@ -33,6 +35,7 @@
   }
 
   let fallbackDataPromise;
+  let cityDataPromise;
   let lgaDataPromise;
   const memoryCache = new Map();
 
@@ -107,17 +110,19 @@
     }
   }
 
+  async function fetchJson(url, label) {
+    const response = await fetch(url, { headers: { Accept: 'application/json' } });
+    if (!response.ok) throw new Error(`${label} request failed: ${response.status}`);
+    return response.json();
+  }
+
   async function loadFallbackDataset() {
     if (!fallbackDataPromise) {
       const cached = readCachedDataset();
       if (cached) {
         fallbackDataPromise = Promise.resolve(cached);
       } else {
-        fallbackDataPromise = fetch(DATA_URL, { headers: { Accept: 'application/json' } })
-          .then((response) => {
-            if (!response.ok) throw new Error(`Fallback location request failed: ${response.status}`);
-            return response.json();
-          })
+        fallbackDataPromise = fetchJson(DATA_URL, 'Fallback location')
           .then((data) => {
             writeCachedDataset(data);
             return data;
@@ -127,13 +132,16 @@
     return fallbackDataPromise;
   }
 
+  async function loadCityDataset() {
+    if (!cityDataPromise) {
+      cityDataPromise = fetchJson(CITY_DATA_URL, 'City dataset');
+    }
+    return cityDataPromise;
+  }
+
   async function loadLgaDataset() {
     if (!lgaDataPromise) {
-      lgaDataPromise = fetch(LGA_DATA_URL, { headers: { Accept: 'application/json' } })
-        .then((response) => {
-          if (!response.ok) throw new Error(`LGA location request failed: ${response.status}`);
-          return response.json();
-        });
+      lgaDataPromise = fetchJson(LGA_DATA_URL, 'LGA location');
     }
     return lgaDataPromise;
   }
@@ -163,6 +171,20 @@
     return state ? getCitiesFromState(state) : [];
   }
 
+  async function loadCitiesFromCityDataset(stateName) {
+    const data = await loadCityDataset();
+    const states = Array.isArray(data) ? data : data?.states;
+    if (!Array.isArray(states)) return [];
+
+    const match = states.find((item) => {
+      const name = item?.state?.name || item?.name || item?.state;
+      return stateNamesMatch(name, stateName);
+    });
+
+    if (!match) return [];
+    return cleanCities(match?.state?.cities || match?.cities || match?.city);
+  }
+
   async function loadLocationsFromLgaDataset(stateName) {
     const data = await loadLgaDataset();
     const states = Array.isArray(data) ? data : data?.states;
@@ -171,9 +193,9 @@
     const state = states.find((item) => stateNamesMatch(item?.name || item?.state, stateName));
     if (!state || !Array.isArray(state.locals)) return [];
 
-    // LGA names are useful delivery-location choices when a city/town API
-    // does not list the customer's locality. They are merged, deduplicated,
-    // and remain covered by the manual-entry option.
+    // LGAs are useful supplemental delivery-location choices when a city/town
+    // provider does not list the customer's locality. They are merged and
+    // deduplicated with actual city/town results rather than replacing them.
     return cleanCities(state.locals);
   }
 
@@ -243,11 +265,12 @@
     }
 
     try {
-      // Merge independent sources so a small city list from one provider does
-      // not hide useful Nigerian delivery locations available in another.
+      // Merge independent sources so a small list from one provider does not
+      // hide useful Nigerian delivery locations available in another source.
       const results = await Promise.allSettled([
         loadCitiesFromApi(stateName),
         loadCitiesFromFallback(stateName),
+        loadCitiesFromCityDataset(stateName),
         loadLocationsFromLgaDataset(stateName)
       ]);
 
