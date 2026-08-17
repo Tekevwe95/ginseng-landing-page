@@ -18,3 +18,5 @@ Responsive product landing page starter built with HTML, CSS and JavaScript.
 3. Add real pricing, delivery and refund details.
 4. Connect the order form to your backend/payment provider.
 5. Test on mobile and desktop.
+
+<!-- Preview redeploy trigger after reverting location selector. -->

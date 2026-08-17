@@ -8,6 +8,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const confirmation = document.getElementById("confirmation");
   const message = document.getElementById("formMessage");
   const summary = document.getElementById("orderSummary");
+  const citySelect = document.getElementById("city");
+  const otherCity = document.getElementById("otherCity");
 
   if (!form || !packageSelect || !message) return;
 
@@ -28,6 +30,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const data = Object.fromEntries(new FormData(form).entries());
 
+    // Keep the backend contract unchanged: it expects the actual location in
+    // `city`. When the customer uses the manual fallback, move `other_city`
+    // into `city` before sending the existing order payload.
+    if (data.city === "__other__") {
+      data.city = String(data.other_city || "").trim();
+    }
+    delete data.other_city;
+
     try {
       const response = await fetch(`${API_URL}/api/orders`, {
         method: "POST",
@@ -46,6 +56,12 @@ document.addEventListener("DOMContentLoaded", () => {
       summary.innerHTML = `<div class="summary"><strong>Order ${escapeHtml(payload.id)}</strong><span>${escapeHtml(payload.package)}</span><span>Customer: ${escapeHtml(payload.name)}</span><span>Phone: ${escapeHtml(payload.phone)}</span><span>Delivery: ${escapeHtml(payload.city)}, ${escapeHtml(payload.state)}</span><span class="payment-line">Payment: <strong>PAY ON DELIVERY</strong></span></div>`;
       message.textContent = "";
       form.reset();
+      if (citySelect) {
+        citySelect.innerHTML = '<option value="">Select your state first</option>';
+        citySelect.disabled = true;
+      }
+      if (otherCity) otherCity.required = false;
+      document.getElementById("otherCityWrap")?.classList.add("is-hidden");
       confirmation?.classList.remove("hidden");
       confirmation?.scrollIntoView({ behavior: "smooth" });
     } catch (error) {
