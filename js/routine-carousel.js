@@ -27,10 +27,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // One fixed showcase position. Each card enters from the right and leaves
   // to the left, giving every step its own moment without moving the section.
+  const routineImages = [
+    'assets/routine-01-drop.png',
+    'assets/routine-02-pour.png',
+    'assets/routine-03-steep.png'
+  ];
+
   track.classList.add('routine-carousel');
   cards.forEach((card, index) => {
     card.classList.add('routine-carousel-card');
     card.setAttribute('aria-hidden', index === 0 ? 'false' : 'true');
+    const image = card.querySelector('.routine-image');
+    if (image && routineImages[index]) {
+      image.style.backgroundImage = `url('${routineImages[index]}')`;
+      image.style.backgroundSize = 'cover';
+      image.style.backgroundPosition = 'center';
+    }
   });
 
   let current = 0;
