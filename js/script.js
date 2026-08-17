@@ -41,7 +41,7 @@ function addIngredientsSection() {
       <div class="ingredients-intro">
         <p class="eyebrow">THE FIVE TREASURES</p>
         <h2>What's inside your cup?</h2>
-        <p>Each herb chosen for its 5,000-year track record. No fillers. No artificial flavours.</p>
+        <p>Your daily cup, made from nature.<br>Five whole herbs. Nothing unnecessary.</p>
       </div>
       <div class="ingredient-grid">
         <article class="ingredient-card">
