@@ -139,6 +139,13 @@ document.addEventListener("DOMContentLoaded", () => {
   addIngredientsSection();
   addRoutineSection();
 
+  // Keep the Health Benefits section immediately after the Daily Ritual.
+  const routineSection = document.getElementById("routine");
+  const healthBenefits = document.getElementById("health-benefits");
+  if (routineSection && healthBenefits) {
+    routineSection.parentNode.insertBefore(healthBenefits, routineSection.nextSibling);
+  }
+
   const packageButtons = document.querySelectorAll(".package");
   const packageSelect = document.getElementById("package");
   const orderSection = document.getElementById("order");
