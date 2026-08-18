@@ -7,39 +7,47 @@ document.addEventListener('DOMContentLoaded', () => {
   const style = document.createElement('style');
   style.id = 'routine-carousel-styles';
   style.textContent = `
-    .routine-carousel{display:block!important;position:relative;max-width:680px!important;height:560px;margin:0 auto!important;overflow:hidden;touch-action:pan-y}
+    .routine-carousel{display:block!important;position:relative;max-width:680px!important;height:560px;margin:0 auto!important;overflow:hidden;touch-action:pan-y;perspective:1200px}
     .routine-carousel .routine-number{display:none!important}
-    .routine-carousel .routine-carousel-card{position:absolute;top:0;left:50%;width:100%;margin:0;opacity:0;visibility:hidden;transform:translateX(100%);will-change:transform,opacity;box-shadow:0 12px 34px rgba(18,59,39,.09)}
-    .routine-carousel .routine-carousel-card.is-active{visibility:visible;opacity:1;transform:translateX(-50%)}
-    .routine-carousel .routine-carousel-card.slide-in-right{visibility:visible;animation:routineCardIn .72s cubic-bezier(.22,.8,.24,1) forwards}
-    .routine-carousel .routine-carousel-card.slide-out-left{visibility:visible;animation:routineCardOut .72s cubic-bezier(.65,.05,.36,1) forwards}
-    @keyframes routineCardIn{from{opacity:0;transform:translateX(105%)}to{opacity:1;transform:translateX(-50%)}}
-    @keyframes routineCardOut{from{opacity:1;transform:translateX(-50%)}to{opacity:0;transform:translateX(-155%)}}
-    .routine-interactive{max-width:680px;margin:20px auto 0;display:flex;align-items:center;justify-content:space-between;gap:14px}
-    .routine-progress{display:flex;align-items:center;gap:7px;flex:1;justify-content:center}
-    .routine-progress-dot{width:8px;height:8px;border-radius:50%;background:#d7d9cc;transition:all .25s ease}
-    .routine-progress-dot.is-active{width:28px;border-radius:999px;background:var(--green)}
-    .routine-control{border:1px solid #d9decf;background:#fff;color:var(--green-dark);border-radius:999px;padding:10px 16px;font:inherit;font-weight:700;cursor:pointer;transition:transform .2s,box-shadow .2s,border-color .2s}
-    .routine-control:hover{transform:translateY(-2px);border-color:var(--green);box-shadow:0 8px 20px rgba(18,59,39,.08)}
-    .routine-control:focus-visible{outline:3px solid rgba(18,59,39,.18);outline-offset:2px}
-    .routine-next{min-width:116px;text-align:center}
-    .routine-next.is-final{min-width:160px}
-    .routine-swipe-hint{text-align:center;color:var(--muted);font-size:.8rem;margin-top:10px}
-    .routine-carousel.reduced-motion .routine-carousel-card{transition:none!important;animation:none!important}
+    .routine-carousel .routine-carousel-card{position:absolute;top:0;left:50%;width:100%;margin:0;opacity:0;visibility:hidden;transform:translate3d(115%,0,0) scale(.96);will-change:transform,opacity;box-shadow:0 16px 45px rgba(18,59,39,.10);transition:box-shadow .45s ease}
+    .routine-carousel .routine-carousel-card.is-active{visibility:visible;opacity:1;transform:translate3d(-50%,0,0) scale(1);z-index:2}
+    .routine-carousel .routine-carousel-card.is-active:hover{box-shadow:0 22px 55px rgba(18,59,39,.14)}
+    .routine-carousel .routine-image{transform:scale(1.01);transition:transform .9s cubic-bezier(.22,.8,.24,1);overflow:hidden}
+    .routine-carousel .routine-carousel-card.is-active:hover .routine-image{transform:scale(1.045)}
+    .routine-carousel .routine-carousel-card.slide-in-right{visibility:visible;z-index:2;animation:routineCardIn .72s cubic-bezier(.22,.8,.24,1) forwards}
+    .routine-carousel .routine-carousel-card.slide-out-left{visibility:visible;z-index:1;animation:routineCardOut .72s cubic-bezier(.65,.05,.36,1) forwards}
+    @keyframes routineCardIn{from{opacity:0;transform:translate3d(105%,0,0) scale(.965)}to{opacity:1;transform:translate3d(-50%,0,0) scale(1)}}
+    @keyframes routineCardOut{from{opacity:1;transform:translate3d(-50%,0,0) scale(1)}to{opacity:0;transform:translate3d(-155%,0,0) scale(.965)}}
+
+    .routine-interactive{max-width:680px;margin:18px auto 0;display:grid;grid-template-columns:1fr;gap:10px}
+    .routine-progress{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:100%}
+    .routine-progress-dot{position:relative;border:0;background:transparent;padding:9px 4px 12px;color:var(--muted);font:inherit;font-size:.72rem;font-weight:800;letter-spacing:.08em;cursor:pointer;text-align:left;text-transform:uppercase}
+    .routine-progress-dot::before{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;border-radius:999px;background:#e3e5dc;transition:background .35s ease,transform .35s ease}
+    .routine-progress-dot::after{content:"";position:absolute;left:0;bottom:0;width:0;height:3px;border-radius:999px;background:var(--green);transition:width .55s cubic-bezier(.22,.8,.24,1)}
+    .routine-progress-dot.is-active{color:var(--green-dark)}
+    .routine-progress-dot.is-active::after{width:100%}
+    .routine-progress-dot:hover{color:var(--green-dark)}
+    .routine-progress-dot:focus-visible{outline:2px solid var(--green);outline-offset:3px;border-radius:5px}
+    .routine-controls{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:2px}
+    .routine-control{border:0;background:transparent;color:var(--green-dark);padding:8px 0;font:inherit;font-weight:700;cursor:pointer;transition:transform .25s ease,opacity .25s ease}
+    .routine-control:hover{transform:translateX(-3px)}
+    .routine-next:hover{transform:translateX(3px)}
+    .routine-control:focus-visible{outline:2px solid var(--green);outline-offset:4px;border-radius:4px}
+    .routine-swipe-hint{text-align:center;color:var(--muted);font-size:.78rem;margin:2px 0 0;opacity:.8}
+    .routine-carousel.reduced-motion .routine-carousel-card,.routine-carousel.reduced-motion .routine-image{animation:none!important;transition:none!important}
     @media(max-width:800px){
       .routine-carousel{max-width:520px!important;height:500px}
       .routine-carousel .routine-carousel-card{width:100%}
       .routine-interactive{max-width:520px}
-      .routine-control{padding:9px 13px}
     }
     @media(max-width:520px){
       .routine-carousel{height:470px}
-      .routine-interactive{gap:8px}
-      .routine-next{min-width:94px;font-size:.86rem}
-      .routine-control{padding:8px 11px;font-size:.82rem}
+      .routine-progress{gap:4px}
+      .routine-progress-dot{font-size:.64rem;padding-bottom:10px}
+      .routine-controls{font-size:.82rem}
     }
     @media(prefers-reduced-motion:reduce){
-      .routine-carousel .routine-carousel-card{animation:none!important;transition:none!important}
+      .routine-carousel .routine-carousel-card,.routine-carousel .routine-image{animation:none!important;transition:none!important}
     }
   `;
   document.head.appendChild(style);
@@ -49,13 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
     'assets/routine-02-pour.png',
     'assets/routine-03-steep.png'
   ];
-
   const stages = ['DROP', 'POUR', 'STEEP & SIP'];
-  const descriptions = [
-    'Place one 10g tea bag into your cup.',
-    'Pour water at 90°C or above into the cup.',
-    'Let the herbs infuse for 3–5 minutes, then enjoy your tea.'
-  ];
 
   track.classList.add('routine-carousel');
   cards.forEach((card, index) => {
@@ -67,96 +69,94 @@ document.addEventListener('DOMContentLoaded', () => {
       image.style.backgroundSize = 'cover';
       image.style.backgroundPosition = 'center';
     }
-    const number = card.querySelector('.routine-number');
-    if (number) number.remove();
+    card.querySelector('.routine-number')?.remove();
   });
 
   const controls = document.createElement('div');
   controls.className = 'routine-interactive';
   controls.innerHTML = `
-    <button type="button" class="routine-control routine-prev" aria-label="Previous brewing step">←</button>
     <div class="routine-progress" aria-label="Brewing progress"></div>
-    <button type="button" class="routine-control routine-next">Next →</button>
+    <div class="routine-controls">
+      <button type="button" class="routine-control routine-prev" aria-label="Previous brewing step">← Previous</button>
+      <button type="button" class="routine-control routine-next" aria-label="Next brewing step">Next →</button>
+    </div>
+    <p class="routine-swipe-hint">Swipe or scroll to move through your ritual</p>
   `;
   track.insertAdjacentElement('afterend', controls);
 
   const progress = controls.querySelector('.routine-progress');
   stages.forEach((stage, index) => {
-    const dot = document.createElement('button');
-    dot.type = 'button';
-    dot.className = 'routine-progress-dot';
-    dot.setAttribute('aria-label', `Go to ${stage.toLowerCase()} step`);
-    dot.dataset.index = index;
-    progress.appendChild(dot);
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'routine-progress-dot';
+    button.dataset.index = index;
+    button.textContent = stage;
+    button.setAttribute('aria-label', `Show ${stage.toLowerCase()} step`);
+    progress.appendChild(button);
   });
-
-  const hint = document.createElement('p');
-  hint.className = 'routine-swipe-hint';
-  hint.textContent = 'Swipe left or right to move through your ritual';
-  controls.insertAdjacentElement('afterend', hint);
 
   let current = 0;
   let timer = null;
   let paused = false;
+  let hasInteracted = false;
   let touchStartX = 0;
   let touchStartY = 0;
-  let hasInteracted = false;
+  let wheelLock = false;
 
   const updateUI = () => {
-    progress.querySelectorAll('.routine-progress-dot').forEach((dot, index) => {
-      dot.classList.toggle('is-active', index === current);
-      dot.setAttribute('aria-current', index === current ? 'step' : 'false');
+    progress.querySelectorAll('.routine-progress-dot').forEach((button, index) => {
+      button.classList.toggle('is-active', index === current);
+      button.setAttribute('aria-current', index === current ? 'step' : 'false');
     });
-
-    const next = controls.querySelector('.routine-next');
-    next.textContent = current === cards.length - 1 ? 'Get Your Ginseng →' : 'Next →';
-    next.classList.toggle('is-final', current === cards.length - 1);
-    next.setAttribute('aria-label', current === cards.length - 1 ? 'Go to order section' : `Go to ${stages[Math.min(current + 1, cards.length - 1)]} step`);
   };
 
   const showCard = (nextIndex, direction = 1) => {
-    const next = (nextIndex + cards.length) % cards.length;
+    const next = Math.max(0, Math.min(cards.length - 1, nextIndex));
     const previous = current;
     if (next === previous) return;
-
     current = next;
-    cards.forEach((card, index) => {
-      card.classList.remove('is-active', 'slide-in-right', 'slide-out-left');
-      card.setAttribute('aria-hidden', index === current ? 'false' : 'true');
-    });
+
+    cards.forEach((card) => card.classList.remove('is-active', 'slide-in-right', 'slide-out-left'));
+    cards[previous].setAttribute('aria-hidden', 'true');
+    cards[current].setAttribute('aria-hidden', 'false');
 
     if (direction >= 0) {
       cards[previous].classList.add('slide-out-left');
       cards[current].classList.add('slide-in-right', 'is-active');
     } else {
-      cards[current].style.transform = 'translateX(-155%)';
+      cards[current].style.transform = 'translate3d(-155%,0,0) scale(.965)';
+      cards[current].style.visibility = 'visible';
+      cards[current].style.opacity = '0';
       cards[current].classList.add('is-active');
       requestAnimationFrame(() => {
         cards[current].style.transition = 'transform .72s cubic-bezier(.22,.8,.24,1), opacity .72s ease';
-        cards[current].style.transform = 'translateX(-50%)';
         cards[previous].style.transition = 'transform .72s cubic-bezier(.65,.05,.36,1), opacity .72s ease';
-        cards[previous].style.transform = 'translateX(105%)';
+        cards[current].style.transform = 'translate3d(-50%,0,0) scale(1)';
+        cards[current].style.opacity = '1';
+        cards[previous].style.transform = 'translate3d(105%,0,0) scale(.965)';
         cards[previous].style.opacity = '0';
       });
       window.setTimeout(() => {
-        cards[current].style = '';
-        cards[previous].style = '';
+        cards[current].style.cssText = '';
+        cards[previous].style.cssText = '';
       }, 760);
     }
-
     updateUI();
   };
 
   const stop = () => {
     if (timer) {
-      window.clearInterval(timer);
+      clearInterval(timer);
       timer = null;
     }
   };
 
   const start = () => {
     if (timer || paused || hasInteracted || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    timer = window.setInterval(() => showCard(current + 1, 1), 4300);
+    timer = setInterval(() => {
+      const next = current + 1;
+      showCard(next >= cards.length ? 0 : next, 1);
+    }, 4800);
   };
 
   const interact = () => {
@@ -166,21 +166,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
   controls.querySelector('.routine-prev').addEventListener('click', () => {
     interact();
-    showCard(current - 1, -1);
+    showCard(current === 0 ? cards.length - 1 : current - 1, -1);
   });
 
   controls.querySelector('.routine-next').addEventListener('click', () => {
+    interact();
     if (current === cards.length - 1) {
       document.getElementById('order')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       return;
     }
-    interact();
     showCard(current + 1, 1);
   });
 
-  progress.querySelectorAll('.routine-progress-dot').forEach((dot) => {
-    dot.addEventListener('click', () => {
-      const target = Number(dot.dataset.index);
+  progress.querySelectorAll('.routine-progress-dot').forEach((button) => {
+    button.addEventListener('click', () => {
+      const target = Number(button.dataset.index);
       if (target === current) return;
       interact();
       showCard(target, target > current ? 1 : -1);
@@ -197,8 +197,40 @@ document.addEventListener('DOMContentLoaded', () => {
     const deltaY = event.changedTouches[0].screenY - touchStartY;
     if (Math.abs(deltaX) < 45 || Math.abs(deltaX) < Math.abs(deltaY)) return;
     interact();
-    showCard(current + (deltaX < 0 ? 1 : -1), deltaX < 0 ? 1 : -1);
+    if (deltaX < 0) showCard(current + 1 >= cards.length ? 0 : current + 1, 1);
+    else showCard(current - 1 < 0 ? cards.length - 1 : current - 1, -1);
   }, { passive: true });
+
+  track.addEventListener('wheel', (event) => {
+    if (Math.abs(event.deltaY) <= Math.abs(event.deltaX) || wheelLock) return;
+    const rect = track.getBoundingClientRect();
+    const visible = rect.bottom > 0 && rect.top < window.innerHeight;
+    if (!visible) return;
+
+    const direction = event.deltaY > 0 ? 1 : -1;
+    const target = current + direction;
+    if (target < 0 || target >= cards.length) return;
+
+    event.preventDefault();
+    interact();
+    wheelLock = true;
+    showCard(target, direction);
+    setTimeout(() => { wheelLock = false; }, 760);
+  }, { passive: false });
+
+  track.addEventListener('mousemove', (event) => {
+    const active = track.querySelector('.routine-carousel-card.is-active');
+    const image = active?.querySelector('.routine-image');
+    if (!image) return;
+    const rect = track.getBoundingClientRect();
+    const x = ((event.clientX - rect.left) / rect.width - .5) * 8;
+    const y = ((event.clientY - rect.top) / rect.height - .5) * 5;
+    image.style.transform = `scale(1.045) translate(${x}px, ${y}px)`;
+  });
+
+  track.addEventListener('mouseleave', () => {
+    track.querySelectorAll('.routine-image').forEach((image) => { image.style.transform = ''; });
+  });
 
   track.addEventListener('mouseenter', () => { paused = true; stop(); });
   track.addEventListener('mouseleave', () => { paused = false; start(); });
