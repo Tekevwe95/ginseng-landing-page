@@ -16,9 +16,8 @@ function addRoutineSection(){
 document.addEventListener("DOMContentLoaded",()=>{
   addIngredientsSection(); addRoutineSection();
   const routineSection=document.getElementById("routine"), healthBenefits=document.getElementById("health-benefits"); if(routineSection&&healthBenefits) routineSection.parentNode.insertBefore(healthBenefits,routineSection.nextSibling);
-
-  // The dashboard Benefits link and hero benefits link both point to the real Health Benefits section.
   document.querySelectorAll('a[href="#benefits"]').forEach(link=>link.setAttribute("href","#health-benefits"));
+  document.querySelectorAll('a.nav-cta[href="#order"], a.hero-primary[href="#order"]').forEach(link=>link.setAttribute("href","#packages"));
 
   const packageButtons=document.querySelectorAll(".package"),packageSelect=document.getElementById("package"),orderSection=document.getElementById("order"),form=document.getElementById("orderForm"),confirmation=document.getElementById("confirmation"),message=document.getElementById("formMessage"),summary=document.getElementById("orderSummary"),citySelect=document.getElementById("city"),otherCity=document.getElementById("otherCity"); if(!form||!packageSelect||!message)return;
   packageButtons.forEach(button=>button.addEventListener("click",()=>{packageSelect.value=button.dataset.package||"";orderSection?.scrollIntoView({behavior:"smooth"})}));
