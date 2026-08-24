@@ -23,9 +23,7 @@
   <header class="site-header">
     <div class="container nav">
       <a class="logo" href="index.html">GINSENG<span>+</span></a>
-      <nav class="desktop-nav" aria-label="Checkout navigation">
-        <a href="index.html#packages">Back to Packages</a>
-      </nav>
+      <nav class="desktop-nav" aria-label="Checkout navigation"><a href="index.html#packages">Back to Packages</a></nav>
       <a class="nav-cta" href="index.html">Back to Home</a>
     </div>
   </header>
@@ -35,59 +33,30 @@
       <div class="container checkout-wrap">
         <a class="checkout-back" href="index.html#packages">← Back to packages</a>
         <div class="checkout-header">
-          <div>
-            <p class="eyebrow">SECURE CHECKOUT</p>
-            <h1>Complete your order.</h1>
-            <p>Your order is confirmed before payment is collected. No card payment is required.</p>
-          </div>
-          <div class="checkout-trust">
-            <span>✓ Pay on delivery</span>
-            <span>✓ Free nationwide delivery</span>
-            <span>✓ Private customer information</span>
-          </div>
+          <div><p class="eyebrow">SECURE CHECKOUT</p><h1>Complete your order.</h1><p>Your order is confirmed before payment is collected. No card payment is required.</p></div>
+          <div class="checkout-trust"><span>✓ Pay on delivery</span><span>✓ Free nationwide delivery</span><span>✓ Private customer information</span></div>
         </div>
-
-        <div class="checkout-progress">
-          <span class="active"><b>1</b> Your details</span><i></i>
-          <span><b>2</b> Delivery</span><i></i>
-          <span><b>3</b> Confirm</span>
-        </div>
-
+        <div class="checkout-progress"><span class="active"><b>1</b> Your details</span><i></i><span><b>2</b> Delivery</span><i></i><span><b>3</b> Confirm</span></div>
         <div class="checkout-grid">
           <div class="checkout-form-card">
             <form id="orderForm">
               <div class="form-step-title"><span>01</span><div><strong>Your contact details</strong><small>How can we reach you?</small></div></div>
-              <div class="field-grid">
-                <label>Full name<input name="name" autocomplete="name" placeholder="e.g. John Doe" required></label>
-                <label>Phone number<input type="tel" name="phone" autocomplete="tel" placeholder="0801 234 5678" required></label>
-              </div>
+              <div class="field-grid"><label>Full name<input name="name" autocomplete="name" placeholder="e.g. John Doe" required></label><label>Phone number<input type="tel" name="phone" autocomplete="tel" placeholder="0801 234 5678" required></label></div>
               <label>WhatsApp number <small>(optional)</small><input type="tel" name="whatsapp" autocomplete="tel" placeholder="If different from your phone number"></label>
-
               <div class="form-step-title"><span>02</span><div><strong>Delivery details</strong><small>Where should we deliver?</small></div></div>
-              <div class="field-grid">
-                <label>State<select name="state" id="state" autocomplete="address-level1" required><option value="">Select your state</option><option>Abia</option><option>Adamawa</option><option>Akwa Ibom</option><option>Anambra</option><option>Bauchi</option><option>Bayelsa</option><option>Benue</option><option>Borno</option><option>Cross River</option><option>Delta</option><option>Ebonyi</option><option>Edo</option><option>Ekiti</option><option>Enugu</option><option>Gombe</option><option>Imo</option><option>Jigawa</option><option>Kaduna</option><option>Kano</option><option>Katsina</option><option>Kebbi</option><option>Kogi</option><option>Kwara</option><option>Lagos</option><option>Nasarawa</option><option>Niger</option><option>Ogun</option><option>Ondo</option><option>Osun</option><option>Oyo</option><option>Plateau</option><option>Rivers</option><option>Sokoto</option><option>Taraba</option><option>Yobe</option><option>Zamfara</option><option>Federal Capital Territory (FCT)</option></select></label>
-                <label>City / Town<select name="city" id="city" autocomplete="address-level2" required disabled><option value="">Select your state first</option></select></label>
-              </div>
+              <div class="field-grid"><label>State<select name="state" id="state" autocomplete="address-level1" required><option value="">Select your state</option><option>Abia</option><option>Adamawa</option><option>Akwa Ibom</option><option>Anambra</option><option>Bauchi</option><option>Bayelsa</option><option>Benue</option><option>Borno</option><option>Cross River</option><option>Delta</option><option>Ebonyi</option><option>Edo</option><option>Ekiti</option><option>Enugu</option><option>Gombe</option><option>Imo</option><option>Jigawa</option><option>Kaduna</option><option>Kano</option><option>Katsina</option><option>Kebbi</option><option>Kogi</option><option>Kwara</option><option>Lagos</option><option>Nasarawa</option><option>Niger</option><option>Ogun</option><option>Ondo</option><option>Osun</option><option>Oyo</option><option>Plateau</option><option>Rivers</option><option>Sokoto</option><option>Taraba</option><option>Yobe</option><option>Zamfara</option><option>Federal Capital Territory (FCT)</option></select></label><label>City / Town<select name="city" id="city" autocomplete="address-level2" required disabled><option value="">Select your state first</option></select></label></div>
               <label id="otherCityWrap" class="other-city-field is-hidden">Other City / Town <small>(optional if your town is not listed)</small><input name="other_city" id="otherCity" autocomplete="address-level2" placeholder="Enter your city or town"></label>
               <label>Delivery address<textarea name="address" rows="3" placeholder="House number, street, landmark..." required></textarea></label>
-
               <div class="form-step-title"><span>03</span><div><strong>Choose your package</strong><small>Pay only when your order arrives</small></div></div>
               <label>Package<select name="package" id="package" required><option value="">Select a pack</option><option>1 Pack — ₦23,000</option><option>2 Packs — ₦38,000</option><option>3 Packs + 1 Free — ₦59,900</option></select></label>
-
               <div class="order-security"><span>🔒</span><div><strong>Your information is kept private.</strong><small>We only use your details to process and deliver your order.</small></div></div>
               <button class="btn btn-primary checkout-submit" type="submit"><span>Place Order</span><strong>— Pay on Delivery</strong></button>
               <small id="formMessage"></small>
             </form>
           </div>
-
           <aside class="order-summary-card">
             <div class="summary-head"><span>YOUR ORDER</span><strong>Pay on delivery</strong></div>
-            <div class="selected-package">
-              <small>Selected package</small>
-              <strong id="checkoutPackageName">Select a package</strong>
-              <b id="checkoutPackagePrice">—</b>
-              <span id="checkoutPackageBenefit">Your selected package will appear here.</span>
-            </div>
+            <div class="selected-package"><small>Selected package</small><strong id="checkoutPackageName">Select a package</strong><b id="checkoutPackagePrice">—</b><span id="checkoutPackageBenefit">Your selected package will appear here.</span></div>
             <div class="summary-lines"><div><span>Delivery</span><strong>FREE</strong></div><div><span>Payment</span><strong>On delivery</strong></div></div>
             <div class="summary-total"><span>Total</span><strong id="checkoutTotal">—</strong></div>
             <div class="summary-reassurance">✓ No payment required now<br>✓ Nationwide delivery<br>✓ Order confirmation by phone</div>
@@ -95,20 +64,29 @@
         </div>
       </div>
     </section>
-
-    <section id="confirmation" class="confirmation hidden">
-      <div class="container confirmation-card">
-        <div class="success-icon">✓</div>
-        <p class="eyebrow">ORDER RECEIVED</p>
-        <h2>Thank you for your order.</h2>
-        <p>Your order has been recorded. Our team will contact you to confirm the delivery details.</p>
-        <div id="orderSummary"></div>
-        <a class="btn btn-primary" href="index.html">Back to Home</a>
-      </div>
-    </section>
+    <section id="confirmation" class="confirmation hidden"><div class="container confirmation-card"><div class="success-icon">✓</div><p class="eyebrow">ORDER RECEIVED</p><h2>Thank you for your order.</h2><p>Your order has been recorded. Our team will contact you to confirm the delivery details.</p><div id="orderSummary"></div><a class="btn btn-primary" href="index.html">Back to Home</a></div></section>
   </main>
 
   <script src="js/script.js?v=20"></script>
   <script src="js/location-api.js?v=5"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const select = document.getElementById('package');
+      if (!select) return;
+      const selected = new URLSearchParams(window.location.search).get('package');
+      if (selected && Array.from(select.options).some(function (option) { return option.value === selected; })) select.value = selected;
+      function refreshSummary() {
+        const value = select.value || '';
+        const amountMatch = value.match(/—\s*(₦[\d,]+)/);
+        const amount = amountMatch ? amountMatch[1] : '—';
+        document.getElementById('checkoutPackageName').textContent = value ? value.split(' — ')[0] : 'Select a package';
+        document.getElementById('checkoutPackagePrice').textContent = amount;
+        document.getElementById('checkoutTotal').textContent = amount;
+        document.getElementById('checkoutPackageBenefit').textContent = value.includes('3 Packs') ? 'Buy 3 Packs, Get 1 Pack Free' : value ? 'Pay on delivery' : 'Your selected package will appear here.';
+      }
+      select.addEventListener('change', refreshSummary);
+      refreshSummary();
+    });
+  </script>
 </body>
 </html>
