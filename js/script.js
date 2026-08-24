@@ -25,13 +25,31 @@ function addCustomerReviews(){
   reviewsGrid.innerHTML=`<article class="customer-review"><span class="review-label">CUSTOMER FEEDBACK</span><p class="review-message">“The rider just called me. I didn't expect the delivery to be this fast 🔥”</p><span class="review-time">18:22</span><p class="review-response">“We try our best to render quality delivery service. Thank you for patronizing us 🥂” <span class="review-time">18:25</span></p></article><article class="customer-review"><span class="review-label">CUSTOMER FEEDBACK</span><p class="review-message">“I am not one that usually trust all this online product but i bought one for my husband, Now he is requesting for more 😊”</p><span class="review-time">Edited 18:16</span><p class="review-response">“That's great. We are happy to always delivery” <span class="review-time">18:19</span></p></article>`;
 }
 
+function getCheckoutUrl(packageName){
+  return `checkout.html?package=${encodeURIComponent(packageName)}`;
+}
+
+function setupCheckoutNavigation(){
+  const isCheckoutPage = /(^|\/)checkout\.html$/i.test(window.location.pathname);
+  if (isCheckoutPage) return;
+
+  document.querySelectorAll('.package[data-package]').forEach(button=>button.addEventListener('click',()=>{
+    window.location.href=getCheckoutUrl(button.dataset.package||'');
+  }));
+
+  const offer=document.getElementById('claimOffer');
+  if(offer) offer.addEventListener('click',()=>{window.location.href=getCheckoutUrl('3 Packs + 1 Free — ₦59,900');});
+}
+
 document.addEventListener("DOMContentLoaded",()=>{
   addIngredientsSection(); addRoutineSection(); addCustomerReviews();
   const routineSection=document.getElementById("routine"), healthBenefits=document.getElementById("health-benefits"); if(routineSection&&healthBenefits) routineSection.parentNode.insertBefore(healthBenefits,routineSection.nextSibling);
   document.querySelectorAll('a[href="#benefits"]').forEach(link=>link.setAttribute("href","#health-benefits"));
   document.querySelectorAll('a.nav-cta[href="#order"], a.hero-primary[href="#order"]').forEach(link=>link.setAttribute("href","#packages"));
+  setupCheckoutNavigation();
+
   const packageButtons=document.querySelectorAll(".package"),packageSelect=document.getElementById("package"),orderSection=document.getElementById("order"),form=document.getElementById("orderForm"),confirmation=document.getElementById("confirmation"),message=document.getElementById("formMessage"),summary=document.getElementById("orderSummary"),citySelect=document.getElementById("city"),otherCity=document.getElementById("otherCity"); if(!form||!packageSelect||!message)return;
-  packageButtons.forEach(button=>button.addEventListener("click",()=>{packageSelect.value=button.dataset.package||"";orderSection?.scrollIntoView({behavior:"smooth"})}));
-  form.addEventListener("submit",async event=>{event.preventDefault();message.textContent="Submitting your order...";message.className="form-status";const submitButton=form.querySelector('button[type="submit"]');if(submitButton)submitButton.disabled=true;const data=Object.fromEntries(new FormData(form).entries());if(data.city==="__other__")data.city=String(data.other_city||"").trim();delete data.other_city;try{const response=await fetch(`${API_URL}/api/orders`,{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify(data)});let payload=null;try{payload=await response.json()}catch(_){}if(!response.ok)throw new Error(payload?.detail||`Server returned ${response.status}`);summary.innerHTML=`<div class="summary"><strong>Order ${escapeHtml(payload.id)}</strong><span>${escapeHtml(payload.package)}</span><span>Customer: ${escapeHtml(payload.name)}</span><span>Phone: ${escapeHtml(payload.phone)}</span><span>Delivery: ${escapeHtml(payload.city)}, ${escapeHtml(payload.state)}</span><span class="payment-line">Payment: <strong>PAY ON DELIVERY</strong></span></div>`;message.textContent="";form.reset();if(citySelect){citySelect.innerHTML='<option value="">Select your state first</option>';citySelect.disabled=true}if(otherCity)otherCity.required=false;document.getElementById("otherCityWrap")?.classList.add("is-hidden");confirmation?.classList.remove("hidden");confirmation?.scrollIntoView({behavior:"smooth"})}catch(error){console.error("Order submission failed:",error);message.textContent=`Order could not be submitted: ${error.message||"Please check your internet connection and try again."}`;message.className="form-status form-error"}finally{if(submitButton)submitButton.disabled=false}});
+  packageButtons.forEach(button=>button.addEventListener("click",()=>{if(/checkout\.html$/i.test(window.location.pathname)){packageSelect.value=button.dataset.package||"";orderSection?.scrollIntoView({behavior:"smooth"})}}));
+  form.addEventListener("submit",async event=>{event.preventDefault();message.textContent="Submitting your order...";message.className="form-status";const submitButton=form.querySelector('button[type="submit"]');if(submitButton)submitButton.disabled=true;const data=Object.fromEntries(new FormData(form).entries());if(data.city==="__other__")data.city=String(data.other_city||"").trim();delete data.other_city;try{const response=await fetch(`${API_URL}/api/orders`,{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify(data)});let payload=null;try{payload=await response.json()}catch(_){}if(!response.ok)throw new Error(payload?.detail||`Server returned ${response.status}`);summary.innerHTML=`<div class="summary"><strong>Order ${escapeHtml(payload.id)}</strong><span>${escapeHtml(payload.package)}</span><span>Customer: ${escapeHtml(payload.name)}</span><span>Phone: ${escapeHtml(payload.phone)}</span><span>Delivery: ${escapeHtml(payload.city)}, ${escapeHtml(payload.state)}</span><span class="payment-line">Payment: <strong>PAY ON DELIVERY</strong></span></div>`;message.textContent="";form.reset();if(citySelect){citySelect.innerHTML='<option value="">Select your state first</option>';citySelect.disabled=true}if(otherCity)otherCity.required=false;document.getElementById("otherCityWrap")?.classList.add("is-hidden");document.querySelector(".order-section")?.classList.add("hidden");confirmation?.classList.remove("hidden");confirmation?.scrollIntoView({behavior:"smooth"})}catch(error){console.error("Order submission failed:",error);message.textContent=`Order could not be submitted: ${error.message||"Please check your internet connection and try again."}`;message.className="form-status form-error"}finally{if(submitButton)submitButton.disabled=false}});
 });
 function escapeHtml(value){return String(value??"").replace(/[&<>\"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]))}
