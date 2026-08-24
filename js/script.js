@@ -13,8 +13,23 @@ function addRoutineSection(){
   const section=document.createElement("section"); section.id="routine"; section.className="routine-section"; section.innerHTML=`<div class="container"><div class="routine-heading"><p class="eyebrow">YOUR DAILY RITUAL</p><h2>Simple to brew. Easy to enjoy.</h2><p>Just 3 simple steps to your perfect cup of Ginseng Five-Treasure Tea.</p></div><div class="routine-steps"><article class="routine-step"><span class="routine-number">01</span><div class="routine-image drop" role="img" aria-label="Ginseng Five-Treasure Tea contents being placed into a cup"></div><div class="routine-content"><h3>Drop</h3><strong>Take one sachet</strong><p>Place one 10g tea bag into your cup.</p></div></article><article class="routine-step"><span class="routine-number">02</span><div class="routine-image pour" role="img" aria-label="Hot water being poured over Ginseng Five-Treasure Tea"></div><div class="routine-content"><h3>Pour</h3><strong>Add hot water</strong><p>Pour water at 90°C or above into the cup.</p></div></article><article class="routine-step"><span class="routine-number">03</span><div class="routine-image steep" role="img" aria-label="Ginseng Five-Treasure Tea steeping in a cup"></div><div class="routine-content"><h3>Steep &amp; Sip</h3><strong>Wait 3–5 minutes</strong><p>Let the herbs infuse, then enjoy your tea.</p></div></article></div></div>`; productSection.parentNode.insertBefore(section,productSection);
 }
 
+function addCustomerReviews(){
+  const reviewsGrid=document.querySelector(".reviews-grid");
+  if(!reviewsGrid || reviewsGrid.dataset.realReviewsAdded) return;
+  reviewsGrid.dataset.realReviewsAdded="true";
+  const reviewStyle=document.createElement("style");
+  reviewStyle.id="customer-review-styles";
+  reviewStyle.textContent=`.reviews-grid.real-reviews{grid-template-columns:repeat(2,minmax(0,1fr));max-width:980px;margin:0 auto}.customer-review{background:#fff;border:1px solid var(--border);border-radius:20px;padding:12px;overflow:hidden;box-shadow:0 10px 30px rgba(18,59,39,.07);transition:transform .25s ease,box-shadow .25s ease}.customer-review:hover{transform:translateY(-4px);box-shadow:0 18px 40px rgba(18,59,39,.12)}.customer-review img{display:block;width:100%;height:auto;border-radius:13px}.customer-review figcaption{padding:13px 8px 6px;color:var(--muted);font-size:.8rem;text-align:center}.customer-review strong{color:var(--green-dark)}@media(max-width:700px){.reviews-grid.real-reviews{grid-template-columns:1fr}}`;
+  document.head.appendChild(reviewStyle);
+  const reviewOne="data:image/jpeg;base64,/9j/";
+  const reviewTwo="data:image/jpeg;base64,/9j/";
+  const images={one:`REVIEW_ONE_DATA`,two:`REVIEW_TWO_DATA`};
+  reviewsGrid.classList.add("real-reviews");
+  reviewsGrid.innerHTML=`<figure class="customer-review"><img src="${images.one}" alt="Customer WhatsApp feedback about fast delivery"><figcaption><strong>Customer feedback</strong> — Fast delivery experience</figcaption></figure><figure class="customer-review"><img src="${images.two}" alt="Customer WhatsApp feedback after buying the tea for her husband"><figcaption><strong>Customer feedback</strong> — A returning customer experience</figcaption></figure>`;
+}
+
 document.addEventListener("DOMContentLoaded",()=>{
-  addIngredientsSection(); addRoutineSection();
+  addIngredientsSection(); addRoutineSection(); addCustomerReviews();
   const routineSection=document.getElementById("routine"), healthBenefits=document.getElementById("health-benefits"); if(routineSection&&healthBenefits) routineSection.parentNode.insertBefore(healthBenefits,routineSection.nextSibling);
   document.querySelectorAll('a[href="#benefits"]').forEach(link=>link.setAttribute("href","#health-benefits"));
   document.querySelectorAll('a.nav-cta[href="#order"], a.hero-primary[href="#order"]').forEach(link=>link.setAttribute("href","#packages"));
