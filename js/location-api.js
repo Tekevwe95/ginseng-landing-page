@@ -265,8 +265,6 @@
     }
 
     try {
-      // Merge independent sources so a small list from one provider does not
-      // hide useful Nigerian delivery locations available in another source.
       const results = await Promise.allSettled([
         loadCitiesFromApi(stateName),
         loadCitiesFromFallback(stateName),
@@ -294,3 +292,19 @@
     setOtherCityVisible(citySelect.value === '__other__');
   });
 })();
+
+// Add the third verified customer experience to the existing Customer Feedback section.
+document.addEventListener('DOMContentLoaded', () => {
+  const reviewsGrid = document.querySelector('.reviews-grid.real-reviews');
+  if (!reviewsGrid || reviewsGrid.querySelector('.customer-review--third')) return;
+
+  const review = document.createElement('article');
+  review.className = 'customer-review customer-review--third';
+  review.innerHTML = `
+    <span class="review-label">CUSTOMER FEEDBACK</span>
+    <p class="review-message">“I'm regretting that I bought only one...Its so good and i will be ordering more”</p>
+    <span class="review-time">18:07</span>
+    <p class="review-response">“Thank you for your patronage ma” <span class="review-time">18:11</span></p>
+  `;
+  reviewsGrid.appendChild(review);
+});
