@@ -39,13 +39,27 @@ function setupCheckoutNavigation(){
 
   const offer=document.getElementById('claimOffer');
   if(offer) offer.addEventListener('click',()=>{window.location.href=getCheckoutUrl('3 Packs + 1 Free — ₦59,900');});
+
+  document.querySelectorAll('a[href="#order"]').forEach(link=>{
+    link.href='checkout.html';
+  });
+}
+
+function removeHomepageCheckout(){
+  const isCheckoutPage = /(^|\/)checkout\.html$/i.test(window.location.pathname);
+  if (isCheckoutPage) return;
+  const orderSection=document.getElementById('order');
+  if(orderSection) orderSection.remove();
+  const confirmation=document.getElementById('confirmation');
+  if(confirmation) confirmation.remove();
 }
 
 document.addEventListener("DOMContentLoaded",()=>{
+  removeHomepageCheckout();
   addIngredientsSection(); addRoutineSection(); addCustomerReviews();
   const routineSection=document.getElementById("routine"), healthBenefits=document.getElementById("health-benefits"); if(routineSection&&healthBenefits) routineSection.parentNode.insertBefore(healthBenefits,routineSection.nextSibling);
   document.querySelectorAll('a[href="#benefits"]').forEach(link=>link.setAttribute("href","#health-benefits"));
-  document.querySelectorAll('a.nav-cta[href="#order"], a.hero-primary[href="#order"]').forEach(link=>link.setAttribute("href","#packages"));
+  document.querySelectorAll('a[href="#order"]').forEach(link=>link.setAttribute("href","checkout.html"));
   setupCheckoutNavigation();
 
   const packageButtons=document.querySelectorAll(".package"),packageSelect=document.getElementById("package"),orderSection=document.getElementById("order"),form=document.getElementById("orderForm"),confirmation=document.getElementById("confirmation"),message=document.getElementById("formMessage"),summary=document.getElementById("orderSummary"),citySelect=document.getElementById("city"),otherCity=document.getElementById("otherCity"); if(!form||!packageSelect||!message)return;
