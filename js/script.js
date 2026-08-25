@@ -1,4 +1,4 @@
-function checkoutUrl(packageName){return `checkout.html?package=${encodeURIComponent(packageName)}`}
+function checkoutUrl(packageName){return `/checkout?package=${encodeURIComponent(packageName)}`}
 function track(eventName,details={}){window.dataLayer=window.dataLayer||[];window.dataLayer.push({event:eventName,...details})}
 document.addEventListener('DOMContentLoaded',()=>{
   document.querySelectorAll('.package[data-package]').forEach(button=>button.addEventListener('click',()=>{const packageName=button.dataset.package||'';track('package_selected',{package:packageName});window.location.href=checkoutUrl(packageName)}));
