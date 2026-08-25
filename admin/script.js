@@ -16,6 +16,7 @@ async function loadOrders() {
     if (!response.ok) throw new Error(payload?.detail || `API error: ${response.status}`);
     allOrders = Array.isArray(payload) ? payload : [];
     applyFilters();
+    syncResetButton();
     message.textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
     const orderId = new URLSearchParams(window.location.search).get("order");
     if (orderId) { const order = allOrders.find((item) => item.id === orderId); if (order) { await openOrder(orderId); history.replaceState({}, document.title, window.location.pathname); } }
@@ -61,6 +62,37 @@ function render(orders) {
 }
 function applyFilters() { const query = $("search").value.trim().toLowerCase(); const status = $("statusFilter").value; const filtered = allOrders.filter((o) => { const haystack = [o.id, o.name, o.phone, o.whatsapp, o.city, o.state, o.address, o.package].join(" ").toLowerCase(); return (!query || haystack.includes(query)) && (status === "all" || o.status === status); }); render(filtered); }
 
+function syncResetButton() { const button = $("resetTestOrders"); if (!button) return; button.disabled = allOrders.length === 0; button.title = allOrders.length ? `Delete ${allOrders.length} current test order${allOrders.length === 1 ? "" : "s"}` : "No orders to reset"; }
+function openResetOrders() {
+  if (!allOrders.length) return;
+  $("resetOrderCount").textContent = `${allOrders.length} order${allOrders.length === 1 ? "" : "s"} will be deleted.`;
+  $("deleteConfirmation").value = "";
+  $("confirmResetOrders").disabled = true;
+  $("resetOrdersMessage").textContent = "";
+  $("resetOrdersModal").classList.remove("hidden");
+  setTimeout(() => $("deleteConfirmation").focus(), 50);
+}
+function closeResetOrders() { $("resetOrdersModal")?.classList.add("hidden"); }
+async function confirmResetOrders() {
+  if ($("deleteConfirmation").value.trim() !== "DELETE") return;
+  const button = $("confirmResetOrders"); const message = $("resetOrdersMessage");
+  button.disabled = true; button.textContent = "Deleting..."; message.textContent = "Deleting test orders..."; message.className = "reset-message";
+  try {
+    const response = await fetch(`${API}/api/admin/orders`, { method: "DELETE", headers: { "X-Admin-Token": token, Accept: "application/json" } });
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) throw new Error(payload?.detail || `Could not reset orders (${response.status}).`);
+    const deleted = Number(payload?.deleted || 0);
+    closeResetOrders();
+    allOrders = [];
+    applyFilters(); syncResetButton();
+    $("loginMessage").textContent = `${deleted} test order${deleted === 1 ? "" : "s"} deleted successfully.`;
+    await loadOrders();
+  } catch (error) {
+    message.textContent = error.message || "Could not delete test orders.";
+    message.className = "reset-message error";
+  } finally { button.textContent = "Delete all test orders"; button.disabled = $("deleteConfirmation").value.trim() !== "DELETE"; }
+}
+
 async function openOrder(id) {
   const order = allOrders.find((item) => item.id === id); if (!order) return;
   let history = []; try { const response = await fetch(`${API}/api/admin/orders/${encodeURIComponent(id)}/history`, { headers: { "X-Admin-Token": token, Accept: "application/json" }, cache: "no-store" }); if (response.ok) history = await response.json(); } catch (_) {}
@@ -78,4 +110,5 @@ function escapeHtml(value) { return String(value ?? "").replace(/[&<>'"]/g, (c) 
 $("loginBtn").onclick = () => { token = $("token").value.trim(); if (!token) return; localStorage.setItem("ginseng_admin_token", token); showDashboard(); };
 $("notifications").onclick = async () => { const registration = await getRegistration(); const subscription = await registration?.pushManager.getSubscription(); if (subscription) await disableNotifications(); else await enableNotifications(); };
 $("testNotification")?.addEventListener("click", testPush); $("refresh").onclick = loadOrders; $("search").oninput = applyFilters; $("statusFilter").onchange = applyFilters;
+$("resetTestOrders")?.addEventListener("click", openResetOrders); $("closeResetOrders")?.addEventListener("click", closeResetOrders); $("cancelResetOrders")?.addEventListener("click", closeResetOrders); document.querySelector("[data-close-reset]")?.addEventListener("click", closeResetOrders); $("deleteConfirmation")?.addEventListener("input", (event) => { $("confirmResetOrders").disabled = event.target.value.trim() !== "DELETE"; }); $("confirmResetOrders")?.addEventListener("click", confirmResetOrders); document.addEventListener("keydown", (event) => { if (event.key === "Escape") closeResetOrders(); });
 $("logout").onclick = () => { stopAutoRefresh(); localStorage.removeItem("ginseng_admin_token"); token = ""; location.reload(); }; if (token) showDashboard();
