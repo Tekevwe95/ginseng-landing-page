@@ -18,7 +18,7 @@ from database import Base, SessionLocal, engine
 from models import OrderRecord, PushSubscription
 from status_history import OrderStatusHistory
 
-app = FastAPI(title="Ginseng Plus API", version="1.8.1")
+app = FastAPI(title="Ginseng Plus API", version="1.8.2")
 
 configured_origins = os.getenv("CORS_ORIGINS", "")
 cors_origins = {x.strip().rstrip("/") for x in configured_origins.split(",") if x.strip()}
@@ -166,17 +166,9 @@ def send_push_payload(payload: str):
 
 def send_order_push(order: OrderRecord):
     try:
-        # Include the order ID explicitly in the push payload and URL so the
-        # service worker can open this exact order in the admin dashboard.
         order_url = f"/admin/?order={order.id}"
-        send_push_payload(json.dumps({
-            "title": "🔔 New MegaStore Wellness Order",
-            "body": f"{order.id} · {order.package} · {order.name}",
-            "url": order_url,
-            "orderId": order.id,
-        }))
+        send_push_payload(json.dumps({"title": "🔔 New MegaStore Wellness Order", "body": f"{order.id} · {order.package} · {order.name}", "url": order_url, "orderId": order.id}))
     except Exception:
-        # Never make customer checkout fail just because an admin notification failed.
         pass
 
 @app.post("/api/admin/push/test", dependencies=[Depends(require_admin)])
@@ -236,6 +228,18 @@ def get_order(order_id: str, session: Session = Depends(db)):
 def list_orders(session: Session = Depends(db)):
     rows = session.scalars(select(OrderRecord).order_by(OrderRecord.created_at.desc())).all()
     return [to_response(row) for row in rows]
+
+@app.delete("/api/admin/orders", dependencies=[Depends(require_admin)])
+def clear_orders(session: Session = Depends(db)):
+    order_count = len(session.scalars(select(OrderRecord.id)).all())
+    try:
+        session.execute(delete(OrderStatusHistory))
+        session.execute(delete(OrderRecord))
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise HTTPException(status_code=500, detail="Could not clear orders")
+    return {"status": "cleared", "deleted": order_count}
 
 @app.get("/api/admin/orders/{order_id}/history", response_model=list[HistoryResponse], dependencies=[Depends(require_admin)])
 def get_order_history(order_id: str, session: Session = Depends(db)):
